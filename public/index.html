@@ -33,8 +33,6 @@
         tr:hover { background: #f1f5f9; cursor: pointer; }
         .badge-high { background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
         .badge-normal { background: #dcfce7; color: #15803d; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .btn-feed { background: #2563eb; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
-        .btn-active { background: #16a34a; color: white; padding: 6px 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; }
         canvas { width: 100%; height: 200px; background: #111; border-radius: 8px; margin-top: 15px; }
     </style>
 </head>
@@ -94,19 +92,18 @@
                 <div class="card-grid">
                     <div class="card"><h3>ASSIGNED PATIENTS</h3><p style="font-size: 28px; font-weight: bold; margin-top: 10px;">3</p></div>
                     <div class="card"><h3>SENDING LIVE DATA</h3><p style="font-size: 28px; font-weight: bold; color: #10b981; margin-top: 10px;">Operational</p></div>
-                    <div class="card"><h3>OPEN ALERTS</h3><p id="doc-alert-count" style="font-size: 28px; font-weight: bold; color: #dc2626; margin-top: 10px;">1</p></div>
+                    <div class="card"><h3>OPEN ALERTS</h3><p id="doc-alert-count" style="font-size: 28px; font-weight: bold; color: #dc2626; margin-top: 10px;">0</p></div>
                 </div>
 
-                <h3>Patient Directory <span style="font-size: 13px; color: #64748b; font-weight: normal;">(Click "Set Active Feed" to target hardware feed or click rows to inspect reports)</span></h3>
+                <h3>Patient Directory <span style="font-size: 13px; color: #64748b; font-weight: normal;">(Click any patient row to inspect historical reports and threshold alerts)</span></h3>
                 <div style="margin-top: 15px;">
                     <table>
                         <thead>
                             <tr>
-                                <th>Patient</th>
-                                <th>Latest</th>
+                                <th>Patient Name</th>
+                                <th>Latest BPM</th>
                                 <th>Status</th>
-                                <th>Signal</th>
-                                <th>Hardware Feed Control</th>
+                                <th>Last Signal</th>
                             </tr>
                         </thead>
                         <tbody id="doctor-patient-table"></tbody>
@@ -205,28 +202,14 @@
             patients.forEach(p => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${p.name}</strong> ${p.is_active_target ? '🎯 [Live Feed]' : ''}</td>
+                    <td><strong>${p.name}</strong></td>
                     <td>${p.latest}</td>
                     <td><span class="${p.status === 'High' || p.status === 'Critical' ? 'badge-high' : 'badge-normal'}">${p.status}</span></td>
                     <td>${p.signal}</td>
-                    <td>
-                        ${p.is_active_target ? 
-                          '<button class="btn-active">✓ Active Target</button>' : 
-                          `<button class="btn-feed" onclick="event.stopPropagation(); setActiveFeed(${p.id})">Set Active Feed</button>`}
-                    </td>
                 `;
                 tr.onclick = () => loadPatientReport(p.id, p.name);
                 tbody.appendChild(tr);
             });
-        }
-
-        async function setActiveFeed(patientId) {
-            await fetch('/api/doctor/set-target', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ patient_id: patientId })
-            });
-            loadDoctorDirectory();
         }
 
         async function loadPatientReport(patientId, patientName) {
@@ -310,7 +293,8 @@
             ctx.stroke();
         }
 
-        function logout() {
+        async function logout() {
+            await fetch('/api/logout', { method: 'POST' });
             localStorage.removeItem('session');
             window.location.reload();
         }
