@@ -8,7 +8,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background: #f4f7f6; color: #333; }
         
-        /* Login Screen */
         #login-section { display: flex; height: 100vh; background: #0f172a; }
         .login-box { width: 450px; background: white; padding: 50px; display: flex; flex-direction: column; justify-content: center; }
         .login-banner { flex: 1; background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; }
@@ -18,7 +17,6 @@
         .btn { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
         .btn:hover { background: #1d4ed8; }
 
-        /* Main Dashboard */
         #app-section { display: none; height: 100vh; display: flex; }
         .sidebar { width: 260px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; }
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
@@ -40,7 +38,6 @@
 </head>
 <body>
 
-    <!-- LOGIN SCREEN -->
     <div id="login-section">
         <div class="login-box">
             <h2 style="margin-bottom: 10px; color: #1e293b;">Welcome to Heart Rate Portal</h2>
@@ -66,11 +63,10 @@
         </div>
         <div class="login-banner">
             <h2>❤️ PulseSync</h2>
-            <p style="margin-top: 10px; color: #94a3b8;">Real-Time Doctor & Patient Telemetry Portal</p>
+            <p style="margin-top: 10px; color: #94a3b8;">MAX30102 Sensor IoT Telemetry Portal</p>
         </div>
     </div>
 
-    <!-- MAIN DASHBOARD -->
     <div id="app-section" style="display: none;">
         <div class="sidebar">
             <div>
@@ -83,18 +79,18 @@
         <div class="main-content">
             <div class="header">
                 <h2 id="portal-title">Dashboard</h2>
-                <span id="live-indicator" style="color: #10b981; font-weight: bold;">● Live IoT Synchronized</span>
+                <span style="color: #10b981; font-weight: bold;">● MAX30102 Sensor Live</span>
             </div>
 
             <!-- DOCTOR DASHBOARD -->
             <div id="doctor-dashboard" class="dashboard-body" style="display: none;">
                 <div class="card-grid">
-                    <div class="card"><h3>Assigned Patients</h3><p id="doc-patient-count" style="font-size: 28px; font-weight: bold; margin-top: 10px;">3</p></div>
+                    <div class="card"><h3>Assigned Patients</h3><p style="font-size: 28px; font-weight: bold; margin-top: 10px;">3</p></div>
                     <div class="card"><h3>System Status</h3><p style="font-size: 20px; font-weight: bold; color: #10b981; margin-top: 10px;">Operational</p></div>
-                    <div class="card"><h3>Active Alerts</h3><p id="doc-alert-count" style="font-size: 28px; font-weight: bold; color: #dc2626; margin-top: 10px;">1</p></div>
+                    <div class="card"><h3>Active Alerts</h3><p style="font-size: 28px; font-weight: bold; color: #dc2626; margin-top: 10px;">1</p></div>
                 </div>
 
-                <h3>Patient Directory (Click a patient to review individual history, reports & alerts)</h3>
+                <h3>Patient Directory (Click to inspect MAX30102 sensor reports)</h3>
                 <div style="margin-top: 15px;">
                     <table>
                         <thead>
@@ -112,7 +108,7 @@
                 <div id="selected-patient-report" style="margin-top: 30px; display: none;" class="card">
                     <h3 id="report-title">Patient Report</h3>
                     <div id="report-alerts" style="margin-top: 15px;"></div>
-                    <h4 style="margin-top: 20px;">Historical Logs (Date, Time & BPM)</h4>
+                    <h4 style="margin-top: 20px;">Historical Sensor Logs</h4>
                     <table style="margin-top: 10px;">
                         <thead><tr><th>Date</th><th>Time</th><th>BPM</th><th>Status</th></tr></thead>
                         <tbody id="report-history-table"></tbody>
@@ -129,7 +125,7 @@
                     <div class="card"><h3>LAST READING</h3><p id="p-last-reading" style="font-size: 14px; margin-top: 15px; color: #64748b;">--</p></div>
                 </div>
                 <div class="card">
-                    <h3>Trend Overview (Live Finger Sensor Pulse Graph)</h3>
+                    <h3>Trend Overview (Live MAX30102 Finger Sensor Graph)</h3>
                     <canvas id="live-pulse-canvas"></canvas>
                 </div>
             </div>
@@ -154,7 +150,7 @@
                 localStorage.setItem('session', JSON.stringify(data));
                 loadApp(data);
             } else {
-                alert(data.error || 'Login failed. Check your credentials and role selection.');
+                alert(data.error || 'Login failed.');
             }
         });
 
@@ -231,6 +227,9 @@
                     if (data.status === 'High') {
                         alertBox.style.display = 'block';
                         alertBox.innerText = `Tachycardia alert: Your heart rate (${data.bpm} BPM) exceeds normal medical threshold (100 BPM).`;
+                    } else if (data.status === 'Low') {
+                        alertBox.style.display = 'block';
+                        alertBox.innerText = `Bradycardia alert: Your heart rate (${data.bpm} BPM) is below normal medical threshold (60 BPM).`;
                     } else {
                         alertBox.style.display = 'none';
                     }
@@ -252,9 +251,9 @@
             ctx.lineWidth = 3;
             ctx.beginPath();
 
-            let xStep = canvas.width / (trendData.length - 1);
+            let xStep = canvas.width / (trendData.length - 1 || 1);
             trendData.forEach((val, i) => {
-                let y = canvas.height - ((val - 50) / 90) * canvas.height;
+                let y = canvas.height - ((val - 40) / 100) * canvas.height;
                 if (i === 0) ctx.moveTo(i * xStep, y);
                 else ctx.lineTo(i * xStep, y);
             });
