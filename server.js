@@ -9,7 +9,6 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Database connection with Aiven SSL
 const db = mysql.createConnection({
     host: process.env.DB_HOST || 'mysql-3b509606-snothitshovelo-4576.d.aivencloud.com',
     user: process.env.DB_USER || 'avnadmin',
@@ -24,89 +23,123 @@ db.connect(err => {
     else console.log('Connected successfully to Aiven Cloud MySQL Database.');
 });
 
-// In-memory store for latest live telemetry sync
-let latestTelemetry = { patient_id: 3, name: 'Engetelo', bpm: 107, status: 'High', last_reading: new Date().toISOString() };
+// Patient storage mapping for all 3 patients
+let patientsData = {
+    1: { id: 1, name: 'Tshovelo Mashimbyi', bpm: 0, status: 'No data', last_reading: 'None yet', trend: [] },
+    2: { id: 2, name: 'Nhlelo', bpm: 0, status: 'No data', last_reading: 'None yet', trend: [] },
+    3: { id: 3, name: 'Engetelo', bpm: 0, status: 'No data', last_reading: 'None yet', trend: [] }
+};
 
-// 1. Strict Role-Based Login & Registration Endpoint
+let activeTargetPatientId = 3; // Default targeted hardware feed
+
+// 1. Strict Role Authorization Endpoint
 app.post('/api/login', (req, res) => {
     const { username, password, role } = req.body;
+    const cleanUser = username ? username.trim() : '';
 
     if (role === 'doctor') {
-        if (username.trim().toLowerCase() === 'dr maswanganye') {
+        if (cleanUser.toLowerCase() === 'dr maswanganye') {
             return res.json({ success: true, username: 'Dr Maswanganye', role: 'doctor' });
         }
-        return res.status(401).json({ error: 'Access denied. Only Dr Maswanganye is authorized as Doctor.' });
+        return res.status(401).json({ error: 'Unauthorized: Only Dr Maswanganye is authorized as Doctor.' });
     } else if (role === 'patient') {
-        if (!username || username.trim() === '') {
+        // Enforce that doctors cannot sign in as patients
+        if (cleanUser.toLowerCase().includes('dr') || cleanUser.toLowerCase() === 'dr maswanganye') {
+            return res.status(403).json({ error: 'Access Denied: Doctors cannot log into patient dashboards.' });
+        }
+        if (!cleanUser) {
             return res.status(400).json({ error: 'Patient name is required.' });
         }
-        return res.json({ success: true, username: username, role: 'patient', patient_id: 3 });
+        // Match or assign patient ID
+        let pId = 1;
+        if (cleanUser.toLowerCase().includes('nhlelo')) pId = 2;
+        else if (cleanUser.toLowerCase().includes('engetelo')) pId = 3;
+
+        return res.json({ success: true, username: cleanUser, role: 'patient', patient_id: pId });
     }
     res.status(400).json({ error: 'Invalid role selection.' });
 });
 
-// 2. Arduino Status Endpoint (Syncs active patient name to LCD)
+// 2. Target Hardware Feed Control (Doctor Directory selection)
+app.post('/api/doctor/set-target', (req, res) => {
+    const { patient_id } = req.body;
+    if (patientsData[patient_id]) {
+        activeTargetPatientId = parseInt(patient_id);
+        return res.json({ success: true, active_target: patientsData[activeTargetPatientId].name });
+    }
+    res.status(400).json({ error: 'Invalid patient ID' });
+});
+
 app.get('/api/arduino/status', (req, res) => {
-    res.json({ active_patient: latestTelemetry.name, patient_id: latestTelemetry.patient_id });
+    const target = patientsData[activeTargetPatientId];
+    res.json({ patient_id: target.id, name: target.name });
 });
 
 // 3. Doctor Patient Directory
 app.get('/api/doctor/patients', (req, res) => {
-    res.json([
-        { id: 1, name: 'Tshovelo Mashimbyi', latest: 107, status: 'High', last_updated: '2026/10/28 01:00:12' },
-        { id: 2, name: 'Nhlelo', latest: 88, status: 'Normal', last_updated: '2026/10/28 00:59:45' },
-        { id: 3, name: latestTelemetry.name, latest: latestTelemetry.bpm, status: latestTelemetry.status, last_updated: latestTelemetry.last_reading }
-    ]);
+    let resultList = Object.values(patientsData).map(p => ({
+        id: p.id,
+        name: p.name,
+        latest: p.bpm > 0 ? p.bpm : '--',
+        status: p.status,
+        signal: p.last_reading,
+        is_active_target: p.id === activeTargetPatientId
+    }));
+    res.json(resultList);
 });
 
-// 4. Individual Patient Detailed History & Reports for Doctor Inspection
+// 4. Individual Patient History & Reports
 app.get('/api/doctor/patient/:id/history', (req, res) => {
-    const patientId = req.params.id;
+    const pId = req.params.id;
+    const p = patientsData[pId] || patientsData[1];
     res.json({
-        patient_id: patientId,
-        history: [
-            { date: '2026/10/28', time: '00:45:00', bpm: 82, status: 'Normal' },
-            { date: '2026/10/28', time: '00:50:00', bpm: 95, status: 'Normal' },
-            { date: '2026/10/28', time: '00:55:00', bpm: latestTelemetry.bpm, status: latestTelemetry.status }
-        ],
-        alerts: [
-            { message: `Threshold alert: Heart rate (${latestTelemetry.bpm} BPM) recorded with status ${latestTelemetry.status}.`, timestamp: latestTelemetry.last_reading }
-        ]
+        patient_id: p.id,
+        history: p.trend.map((val, idx) => ({
+            date: new Date().toLocaleDateString(),
+            time: `00:${10 + idx}:00`,
+            bpm: val,
+            status: val > 100 ? 'High' : (val < 60 ? 'Low' : 'Normal')
+        })),
+        alerts: p.bpm > 100 ? [{ message: `Tachycardia alert: Heart rate (${p.bpm} BPM) exceeds threshold (100 BPM).`, timestamp: p.last_reading }] : []
     });
 });
 
-// 5. IoT Hardware Telemetry Receiver (Arduino / Sensor Node)
+// 5. MAX30102 Telemetry Receiver from Arduino
 app.post('/api/telemetry', (req, res) => {
     const deviceKey = req.headers['x-device-key'];
     if (deviceKey !== process.env.DEVICE_KEY && deviceKey !== 'f5e2c78101a84a75ffbac169ca8a6ebd') {
         return res.status(403).json({ error: 'Invalid device key' });
     }
     const { patient_id, bpm, raw_signal } = req.body;
-    
-    let status = 'Normal';
-    if (bpm > 100) status = 'High';
-    else if (bpm < 60) status = 'Low';
+    const targetId = patient_id || activeTargetPatientId;
 
-    latestTelemetry = {
-        patient_id: patient_id || 3,
-        name: 'Engetelo',
-        bpm: bpm,
-        status: status,
-        last_reading: new Date().toLocaleString()
-    };
+    if (patientsData[targetId]) {
+        let status = 'Normal';
+        if (bpm > 100) status = 'High';
+        else if (bpm < 60) status = 'Low';
 
-    console.log(`Telemetry synchronized - Patient: Engetelo, BPM: ${bpm}, Status: ${status}`);
-    res.json({ success: true, message: 'Telemetry synchronized successfully' });
+        patientsData[targetId].bpm = bpm;
+        patientsData[targetId].status = status;
+        patientsData[targetId].last_reading = new Date().toLocaleString();
+        
+        patientsData[targetId].trend.push(bpm);
+        if (patientsData[targetId].trend.length > 15) patientsData[targetId].trend.shift();
+    }
+
+    res.json({ success: true, message: 'Sensor data recorded' });
 });
 
 // 6. Patient Live Feed Endpoint
 app.get('/api/patient/live/:id', (req, res) => {
+    const pId = req.params.id;
+    const p = patientsData[pId] || patientsData[3];
     res.json({
-        patient_id: req.params.id,
-        bpm: latestTelemetry.bpm,
-        status: latestTelemetry.status,
-        last_reading: latestTelemetry.last_reading,
-        trend: [75, 82, 88, 95, latestTelemetry.bpm]
+        patient_id: p.id,
+        name: p.name,
+        bpm: p.bpm > 0 ? p.bpm : '--',
+        status: p.status,
+        last_reading: p.last_reading,
+        trend: p.trend
     });
 });
 

@@ -33,11 +33,14 @@
         tr:hover { background: #f1f5f9; cursor: pointer; }
         .badge-high { background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
         .badge-normal { background: #dcfce7; color: #15803d; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
+        .btn-feed { background: #2563eb; color: white; padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
+        .btn-active { background: #16a34a; color: white; padding: 6px 12px; border: none; border-radius: 4px; font-weight: bold; font-size: 13px; }
         canvas { width: 100%; height: 200px; background: #111; border-radius: 8px; margin-top: 15px; }
     </style>
 </head>
 <body>
 
+    <!-- LOGIN SCREEN -->
     <div id="login-section">
         <div class="login-box">
             <h2 style="margin-bottom: 10px; color: #1e293b;">Welcome to Heart Rate Portal</h2>
@@ -45,7 +48,7 @@
             <form id="login-form">
                 <div class="form-group">
                     <label>Username</label>
-                    <input type="text" id="username" required placeholder="Enter username (Dr Maswanganye for Doctor)">
+                    <input type="text" id="username" required placeholder="Dr Maswanganye or Patient Name">
                 </div>
                 <div class="form-group">
                     <label>Password</label>
@@ -63,42 +66,47 @@
         </div>
         <div class="login-banner">
             <h2>❤️ PulseSync</h2>
-            <p style="margin-top: 10px; color: #94a3b8;">MAX30102 Sensor IoT Telemetry Portal</p>
+            <p style="margin-top: 10px; color: #94a3b8;">Real-Time Doctor & Patient Telemetry Portal</p>
         </div>
     </div>
 
+    <!-- MAIN DASHBOARD -->
     <div id="app-section" style="display: none;">
         <div class="sidebar">
             <div>
                 <h3 style="color: #ef4444; margin-bottom: 30px;">❤️ PulseSync</h3>
-                <p id="user-display" style="font-size: 14px; color: #64748b;"></p>
+                <p id="user-display" style="font-size: 14px; color: #64748b; font-weight: bold;"></p>
             </div>
             <button onclick="logout()" class="btn" style="background: #ef4444;">Sign Out</button>
         </div>
 
         <div class="main-content">
             <div class="header">
-                <h2 id="portal-title">Dashboard</h2>
-                <span style="color: #10b981; font-weight: bold;">● MAX30102 Sensor Live</span>
+                <div>
+                    <h2 id="portal-title">Dashboard</h2>
+                    <p style="font-size: 12px; color: #64748b; margin-top: 2px;">Real-time biomedical telemetry monitoring system</p>
+                </div>
+                <span id="live-indicator" style="color: #10b981; font-weight: bold;">● Live IoT Feed Active</span>
             </div>
 
-            <!-- DOCTOR DASHBOARD -->
+            <!-- DOCTOR MONITORING PORTAL -->
             <div id="doctor-dashboard" class="dashboard-body" style="display: none;">
                 <div class="card-grid">
-                    <div class="card"><h3>Assigned Patients</h3><p style="font-size: 28px; font-weight: bold; margin-top: 10px;">3</p></div>
-                    <div class="card"><h3>System Status</h3><p style="font-size: 20px; font-weight: bold; color: #10b981; margin-top: 10px;">Operational</p></div>
-                    <div class="card"><h3>Active Alerts</h3><p style="font-size: 28px; font-weight: bold; color: #dc2626; margin-top: 10px;">1</p></div>
+                    <div class="card"><h3>ASSIGNED PATIENTS</h3><p style="font-size: 28px; font-weight: bold; margin-top: 10px;">3</p></div>
+                    <div class="card"><h3>SENDING LIVE DATA</h3><p style="font-size: 28px; font-weight: bold; color: #10b981; margin-top: 10px;">Operational</p></div>
+                    <div class="card"><h3>OPEN ALERTS</h3><p id="doc-alert-count" style="font-size: 28px; font-weight: bold; color: #dc2626; margin-top: 10px;">1</p></div>
                 </div>
 
-                <h3>Patient Directory (Click to inspect MAX30102 sensor reports)</h3>
+                <h3>Patient Directory <span style="font-size: 13px; color: #64748b; font-weight: normal;">(Click "Set Active Feed" to target hardware feed or click rows to inspect reports)</span></h3>
                 <div style="margin-top: 15px;">
                     <table>
                         <thead>
                             <tr>
-                                <th>Patient Name</th>
-                                <th>Latest BPM</th>
+                                <th>Patient</th>
+                                <th>Latest</th>
                                 <th>Status</th>
-                                <th>Last Updated</th>
+                                <th>Signal</th>
+                                <th>Hardware Feed Control</th>
                             </tr>
                         </thead>
                         <tbody id="doctor-patient-table"></tbody>
@@ -108,7 +116,7 @@
                 <div id="selected-patient-report" style="margin-top: 30px; display: none;" class="card">
                     <h3 id="report-title">Patient Report</h3>
                     <div id="report-alerts" style="margin-top: 15px;"></div>
-                    <h4 style="margin-top: 20px;">Historical Sensor Logs</h4>
+                    <h4 style="margin-top: 20px;">Historical Logs (Date, Year, Time & BPM)</h4>
                     <table style="margin-top: 10px;">
                         <thead><tr><th>Date</th><th>Time</th><th>BPM</th><th>Status</th></tr></thead>
                         <tbody id="report-history-table"></tbody>
@@ -118,14 +126,31 @@
 
             <!-- PATIENT DASHBOARD -->
             <div id="patient-dashboard" class="dashboard-body" style="display: none;">
-                <div id="patient-alert-box" class="alert-banner" style="display: none;"></div>
-                <div class="card-grid">
-                    <div class="card"><h3>HEART RATE</h3><p id="p-bpm" style="font-size: 32px; font-weight: bold; color: #ef4444; margin-top: 10px;">-- BPM</p></div>
-                    <div class="card"><h3>STATUS</h3><p id="p-status" style="font-size: 24px; font-weight: bold; margin-top: 10px;">--</p></div>
-                    <div class="card"><h3>LAST READING</h3><p id="p-last-reading" style="font-size: 14px; margin-top: 15px; color: #64748b;">--</p></div>
+                <div class="card" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <h2 id="patient-name-header" style="color: #1e293b;">Patient Name</h2>
+                    <span id="p-signal-badge" style="background: #e2e8f0; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">● Live Sensor Feed</span>
                 </div>
+
+                <div class="card-grid">
+                    <div class="card">
+                        <h3>HEART RATE</h3>
+                        <p id="p-bpm" style="font-size: 32px; font-weight: bold; color: #ef4444; margin-top: 10px;">-- BPM</p>
+                    </div>
+                    <div class="card">
+                        <h3>STATUS</h3>
+                        <p id="p-status" style="font-size: 24px; font-weight: bold; margin-top: 10px;">No data</p>
+                        <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Normal range 60-100 BPM</p>
+                    </div>
+                    <div class="card">
+                        <h3>LAST READING</h3>
+                        <p id="p-last-reading" style="font-size: 14px; margin-top: 15px; color: #64748b;">None yet</p>
+                    </div>
+                </div>
+
+                <div id="patient-alert-box" class="alert-banner" style="display: none;"></div>
+
                 <div class="card">
-                    <h3>Trend Overview (Live MAX30102 Finger Sensor Graph)</h3>
+                    <h3>Trend Overview</h3>
                     <canvas id="live-pulse-canvas"></canvas>
                 </div>
             </div>
@@ -150,21 +175,22 @@
                 localStorage.setItem('session', JSON.stringify(data));
                 loadApp(data);
             } else {
-                alert(data.error || 'Login failed.');
+                alert(data.error || 'Login authorization failed.');
             }
         });
 
         function loadApp(session) {
             document.getElementById('login-section').style.display = 'none';
             document.getElementById('app-section').style.display = 'flex';
-            document.getElementById('user-display').innerText = `${session.username} (${session.role.toUpperCase()})`;
+            document.getElementById('user-display').innerText = `${session.username}\n${session.role.toUpperCase()}`;
 
             if (session.role === 'doctor') {
                 document.getElementById('portal-title').innerText = 'Doctor Monitoring Portal';
                 document.getElementById('doctor-dashboard').style.display = 'block';
                 loadDoctorDirectory();
             } else {
-                document.getElementById('portal-title').innerText = `Patient Dashboard: ${session.username}`;
+                document.getElementById('portal-title').innerText = 'Patient Dashboard';
+                document.getElementById('patient-name-header').innerText = session.username;
                 document.getElementById('patient-dashboard').style.display = 'block';
                 startPatientLiveFeed(session.patient_id || 3);
             }
@@ -179,14 +205,28 @@
             patients.forEach(p => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td><strong>${p.name}</strong></td>
-                    <td>${p.latest} BPM</td>
+                    <td><strong>${p.name}</strong> ${p.is_active_target ? '🎯 [Live Feed]' : ''}</td>
+                    <td>${p.latest}</td>
                     <td><span class="${p.status === 'High' || p.status === 'Critical' ? 'badge-high' : 'badge-normal'}">${p.status}</span></td>
-                    <td>${p.last_updated}</td>
+                    <td>${p.signal}</td>
+                    <td>
+                        ${p.is_active_target ? 
+                          '<button class="btn-active">✓ Active Target</button>' : 
+                          `<button class="btn-feed" onclick="event.stopPropagation(); setActiveFeed(${p.id})">Set Active Feed</button>`}
+                    </td>
                 `;
                 tr.onclick = () => loadPatientReport(p.id, p.name);
                 tbody.appendChild(tr);
             });
+        }
+
+        async function setActiveFeed(patientId) {
+            await fetch('/api/doctor/set-target', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ patient_id: patientId })
+            });
+            loadDoctorDirectory();
         }
 
         async function loadPatientReport(patientId, patientName) {
@@ -198,17 +238,25 @@
             const data = await res.json();
 
             const alertBox = document.getElementById('report-alerts');
-            alertBox.innerHTML = data.alerts.map(a => `<div class="alert-banner">⚠️ ${a.message} (Timestamp: ${a.timestamp})</div>`).join('');
+            if (data.alerts.length > 0) {
+                alertBox.innerHTML = data.alerts.map(a => `<div class="alert-banner">⚠️ ${a.message} (Timestamp: ${a.timestamp})</div>`).join('');
+            } else {
+                alertBox.innerHTML = '<div style="color: #15803d; font-weight: 500;">No active threshold breaches for this patient.</div>';
+            }
 
             const historyTbody = document.getElementById('report-history-table');
-            historyTbody.innerHTML = data.history.map(h => `
-                <tr>
-                    <td>${h.date}</td>
-                    <td>${h.time}</td>
-                    <td><strong>${h.bpm} BPM</strong></td>
-                    <td><span class="${h.status === 'High' ? 'badge-high' : 'badge-normal'}">${h.status}</span></td>
-                </tr>
-            `).join('');
+            if (data.history.length === 0) {
+                historyTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#64748b;">No telemetry records yet. Place finger on MAX30102 sensor.</td></tr>`;
+            } else {
+                historyTbody.innerHTML = data.history.map(h => `
+                    <tr>
+                        <td>${h.date}</td>
+                        <td>${h.time}</td>
+                        <td><strong>${h.bpm} BPM</strong></td>
+                        <td><span class="${h.status === 'High' ? 'badge-high' : 'badge-normal'}">${h.status}</span></td>
+                    </tr>
+                `).join('');
+            }
         }
 
         function startPatientLiveFeed(patientId) {
@@ -217,7 +265,7 @@
                     const res = await fetch(`/api/patient/live/${patientId}`);
                     const data = await res.json();
                     
-                    document.getElementById('p-bpm').innerText = `${data.bpm} BPM`;
+                    document.getElementById('p-bpm').innerText = data.bpm !== '--' ? `${data.bpm} BPM` : '-- BPM';
                     const statusEl = document.getElementById('p-status');
                     statusEl.innerText = data.status;
                     statusEl.style.color = data.status === 'High' ? '#dc2626' : '#15803d';
@@ -226,15 +274,17 @@
                     const alertBox = document.getElementById('patient-alert-box');
                     if (data.status === 'High') {
                         alertBox.style.display = 'block';
-                        alertBox.innerText = `Tachycardia alert: Your heart rate (${data.bpm} BPM) exceeds normal medical threshold (100 BPM).`;
+                        alertBox.innerText = `Tachycardia alert: Your heart rate (${data.bpm} BPM) exceeds threshold (100 BPM).`;
                     } else if (data.status === 'Low') {
                         alertBox.style.display = 'block';
-                        alertBox.innerText = `Bradycardia alert: Your heart rate (${data.bpm} BPM) is below normal medical threshold (60 BPM).`;
+                        alertBox.innerText = `Bradycardia alert: Your heart rate (${data.bpm} BPM) is below threshold (60 BPM).`;
                     } else {
                         alertBox.style.display = 'none';
                     }
 
-                    drawLivePulseGraph(data.trend);
+                    if (data.trend && data.trend.length > 0) {
+                        drawLivePulseGraph(data.trend);
+                    }
                 } catch (err) {
                     console.error('Error fetching live telemetry', err);
                 }
