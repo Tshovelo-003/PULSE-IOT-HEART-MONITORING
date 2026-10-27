@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PulseSync Inc. - Advanced Heart Monitoring Portal</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ef4444' d='M12 21s-7-4.4-9.5-9A5.5 5.5 0 0 1 12 6.5 5.5 5.5 0 0 1 21.5 12C19 16.6 12 21 12 21z'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--sidebar-w:260px;--navy:#0f172a;--bg:#f4f6f9;--card:#fff;--line:#e2e8f0;--ink:#1e293b;--muted:#64748b;--brand:#ef4444;--accent:#2563eb;--ok:#16a34a;--low:#2563eb;--high:#dc2626;--r:16px}
+    *{box-sizing:border-box;margin:0;font-family:'Inter',system-ui,sans-serif}
+    [hidden]{display:none!important}
+    body{background:var(--bg);color:var(--ink);min-height:100vh}
+
+    .auth{min-height:100vh;display:grid;grid-template-columns:1fr 1.2fr;background:var(--bg);align-items:center;padding:40px}
+    .auth-form-wrapper{width:100%;max-width:480px;margin:0 auto;background:var(--card);border:1px solid #e5e7eb;border-radius:var(--r);box-shadow:0 10px 25px -5px rgba(0,0,0,.05);padding:48px 40px;position:relative}
+
+    .lock-badge{width:56px;height:56px;background:var(--accent);border-radius:50%;display:grid;place-items:center;margin:0 auto 24px;color:#fff}
+    .lock-badge svg{width:26px;height:26px;stroke:#fff;fill:none;stroke-width:2.2}
+
+    .auth-form-wrapper h1{font-size:1.6rem;color:var(--navy);font-weight:700;text-align:center;margin-bottom:8px}
+    .auth-form-wrapper p.sub-title{font-size:.9rem;color:var(--muted);text-align:center;margin-bottom:32px}
+
+    .auth-banner-side{background:#0f172a;height:100vh;position:fixed;top:0;right:0;width:55vw;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;color:#fff;text-align:center}
+    
+    .telemetry-graphic-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+      margin-bottom: 24px;
+    }
+    .heart-ecg-art {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .heart-ecg-art svg { width: 100%; max-width: 320px; height: auto; }
+    .banner-title { font-size: 1.35rem; font-weight: 700; color: #fff; }
+
+    label{display:block;font-size:.88rem;color:var(--ink);margin:16px 0 6px;font-weight:600}
+    input{width:100%;padding:12px 16px;background:#fff;border:1px solid #cbd5e1;border-radius:8px;color:var(--ink);font:inherit;font-size:.95rem}
+    input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+
+    button.btn-primary{margin-top:28px;width:100%;padding:13px;background:var(--accent);color:#fff;border:0;border-radius:8px;font:inherit;font-weight:600;cursor:pointer}
+    button.btn-primary:hover{background:#1d4ed8}
+
+    .msg{padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:.92rem}
+    .msg.ok{background:#dcfce7;color:#166534;border:1px solid #86efac}
+    .msg.err{background:#fee2e2;color:#991b1b;border:1px solid #fca5a5}
+
+    .app-layout{display:flex;min-height:100vh}
+    .sidebar{width:var(--sidebar-w);background:#fff;border-right:1px solid var(--line);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;z-index:10}
+    .sidebar-head{padding:24px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;font-weight:700;font-size:1.1rem;color:var(--navy)}
+    .sidebar-head svg{width:28px;height:28px;fill:var(--brand)}
+    .sidebar-nav{padding:20px 12px;flex:1;display:flex;flex-direction:column;gap:4px}
+    .nav-item{display:flex;align-items:center;gap:12px;padding:12px 16px;color:var(--muted);text-decoration:none;border-radius:8px;font-weight:500;font-size:.95rem}
+    .nav-item.active{background:#f1f5f9;color:var(--navy)}
+    
+    .sidebar-footer{padding:16px 20px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+    .user-mini{display:flex;align-items:center;gap:10px}
+    .user-avatar{width:36px;height:36px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-weight:600;font-size:.9rem}
+    .user-info div:first-child{font-weight:600;font-size:.9rem}
+    .user-info div:last-child{font-size:.78rem;color:var(--muted)}
+    
+    .btn-signout{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:8px;background:#f1f5f9;color:#b91c1c;border:1px solid #fca5a5;border-radius:6px;font-weight:600;font-size:.85rem;cursor:pointer}
+    .btn-signout:hover{background:#fee2e2}
+
+    .main-content{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column}
+    .top-header{height:70px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 32px}
+    .page-title h1{font-size:1.35rem;color:var(--navy);font-weight:700}
+    .page-title p{font-size:.85rem;color:var(--muted)}
+    .content-body{padding:32px;max-width:1200px;width:100%}
+
+    .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:24px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:24px}
+    .stat-card{display:flex;flex-direction:column;gap:8px}
+    .stat-label{font-size:.85rem;color:var(--muted);font-weight:600;text-transform:uppercase}
+    .stat-value{display:flex;align-items:baseline;gap:6px}
+    .stat-value span{font-size:2.8rem;font-weight:700;color:var(--navy)}
+    .big-num{font-size:2.2rem;font-weight:700;color:var(--navy)}
+
+    .chip{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:.82rem;font-weight:600}
+    .chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+    .chip.live{background:#dcfce7;color:var(--ok)}
+    .chip.idle{background:#fef3c7;color:#b45309}
+
+    .pill{display:inline-block;padding:3px 10px;border-radius:6px;font-size:.82rem;font-weight:600}
+    .pill.normal{background:#dcfce7;color:var(--ok)}
+    .pill.low{background:#dbeafe;color:var(--low)}
+    .pill.high{background:#fee2e2;color:var(--high)}
+
+    .chart{width:100%;height:240px;display:block;background:#fff;border:1px solid var(--line);border-radius:var(--r);margin-top:12px}
+    table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-top:12px}
+    th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);font-size:.9rem}
+    th{font-weight:600;color:var(--muted);background:#f8fafc}
+    tr.pick{cursor:pointer}tr.pick:hover,tr.sel{background:#f1f5f9}
+    .alert-box{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#fff;border:1px solid var(--line);border-left:4px solid var(--high);border-radius:var(--r);margin-bottom:10px}
+    .note{margin-top:16px;padding:14px 18px;background:#fff;border:1px solid var(--line);border-left:4px solid var(--navy);border-radius:0 var(--r) var(--r) 0;font-size:.9rem}
+
+    .inline-form{margin:16px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .inline-form input{width:90px;display:inline-block;padding:8px}
+    .inline-form button{width:auto;margin:0;padding:9px 16px;background:var(--navy);color:#fff;border:0;border-radius:6px;font-weight:600;cursor:pointer}
+  </style>
+</head>
+<body>
+
+<main id="login-view" class="auth">
+  <div class="auth-form-wrapper">
+    <div class="lock-badge">
+      <svg viewBox="0 0 24 24" width="26" height="26" stroke="#fff" fill="none" stroke-width="2.2"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    </div>
+    <h1>Welcome to PulseSync Portal</h1>
+    <p class="sub-title">Sign in to access your telemetry dashboard</p>
+    <div id="msg" class="msg" hidden></div>
+    <form id="login-form">
+      <label for="username">Username</label>
+      <input id="username" required maxlength="50" autofocus placeholder="Enter your username">
+      <label for="password">Password</label>
+      <input id="password" type="password" required maxlength="100" placeholder="Enter your password">
+      <button id="login-btn" class="btn-primary" type="submit">Sign In</button>
+    </form>
+  </div>
+  <section class="auth-banner-side">
+    <div class="telemetry-graphic-container">
+      <div class="heart-ecg-art">
+        <svg viewBox="0 0 320 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="160" cy="90" r="75" fill="#ef4444" fill-opacity="0.15"/>
+          <path d="M160 145C160 145 105 110 85 75C70 48 90 20 120 25C140 28 155 45 160 55C165 45 180 28 200 25C230 20 250 48 235 75C215 110 160 145 160 145Z" fill="#ef4444"/>
+          <path d="M30 90H125L138 55L155 130L175 45L190 110L205 80L218 90H290" stroke="#fff" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
+    <h2 class="banner-title">Real-Time Doctor & Patient Telemetry Portal</h2>
+  </section>
+</main>
+
+<div id="app-view" class="app-layout" hidden>
+  <aside class="sidebar">
+    <div class="sidebar-head">
+      <svg viewBox="0 0 24 24" width="28" height="28" fill="#ef4444"><path d="M12 21s-7-4.4-9.5-9A5.5 5.5 0 0 1 12 6.5 5.5 5.5 0 0 1 21.5 12C19 16.6 12 21 12 21z"/></svg>
+      <span>PulseSync</span>
+    </div>
+    <div class="sidebar-nav">
+      <a href="#" class="nav-item active">Dashboard</a>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-mini">
+        <div id="user-avatar" class="user-avatar">PS</div>
+        <div class="user-info">
+          <div id="who">User</div>
+          <div id="role">Role</div>
+        </div>
+      </div>
+      <button id="logout" class="btn-signout">Sign Out</button>
+    </div>
+  </aside>
+
+  <div class="main-content">
+    <header class="top-header">
+      <div class="page-title">
+        <h1 id="header-heading">Dashboard</h1>
+        <p>Real-time biomedical telemetry monitoring system</p>
+      </div>
+    </header>
+
+    <div class="content-body">
+      <!-- PATIENT VIEW -->
+      <section id="patient-view" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <h2 id="p-name" style="font-size:1.3rem;color:var(--navy)">Patient Dashboard</h2>
+          <span id="p-conn" class="chip idle">No signal</span>
+        </div>
+        <div class="stats-grid">
+          <div class="card stat-card">
+            <span class="stat-label">Heart rate</span>
+            <div class="stat-value"><span id="p-bpm">--</span><small>BPM</small></div>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-label">Status</span>
+            <span id="p-status" class="pill none">No data</span>
+            <p id="p-range" style="font-size:.85rem;color:var(--muted);margin-top:4px"></p>
+          </div>
+          <div class="card stat-card">
+            <span class="stat-label">Last reading</span>
+            <strong id="p-when" style="font-size:1.1rem;color:var(--navy)">None yet</strong>
+          </div>
+        </div>
+        <p id="p-explain" class="note"></p>
+        <h2 style="font-size:1.1rem;color:var(--navy);margin:28px 0 10px">Trend Overview</h2>
+        <canvas id="p-chart" class="chart"></canvas>
+        <h2 style="font-size:1.1rem;color:var(--navy);margin:28px 0 10px">Reading History</h2>
+        <table><thead><tr><th>Timestamp</th><th>BPM</th><th>Status</th></tr></thead><tbody id="p-rows"></tbody></table>
+      </section>
+
+      <!-- DOCTOR VIEW -->
+      <section id="doctor-view" hidden>
+        <div class="stats-grid">
+          <div class="card stat-card"><span class="stat-label">Assigned Patients</span><strong id="s-patients" class="big-num">0</strong></div>
+          <div class="card stat-card"><span class="stat-label">Sending Live Data</span><strong id="s-live" class="big-num">0</strong></div>
+          <div class="card stat-card"><span class="stat-label">Open Alerts</span><strong id="s-alerts" class="big-num">0</strong></div>
+        </div>
+        <h2 style="font-size:1.1rem;color:var(--navy);margin:24px 0 10px">Active Alerts</h2>
+        <div id="d-alerts"></div>
+        <h2 style="font-size:1.1rem;color:var(--navy);margin:24px 0 10px">Patient Directory (Click a patient to review history & thresholds)</h2>
+        <table><thead><tr><th>Patient</th><th>Latest BPM</th><th>Status</th><th>Signal</th></tr></thead><tbody id="d-rows"></tbody></table>
+        
+        <section id="d-detail" class="card" style="margin-top:24px" hidden>
+          <h2 id="d-name" style="font-size:1.2rem;color:var(--navy);margin-bottom:12px"></h2>
+          <canvas id="d-chart" class="chart"></canvas>
+          <form id="d-thr" class="inline-form">
+            <label style="margin:0">Normal Range: <input id="d-min" type="number" min="30" max="219"> to <input id="d-max" type="number" min="31" max="220"> BPM</label>
+            <button type="submit">Save Range</button> <span id="d-thrmsg" style="font-size:.85rem;color:var(--muted)"></span>
+          </form>
+          <table><thead><tr><th>Timestamp</th><th>BPM</th><th>Status</th></tr></thead><tbody id="d-hist"></tbody></table>
+        </section>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+
+function el(tag, props = {}, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'class') n.className = v;
+    else if (k === 'text') n.textContent = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  kids.flat().forEach(c => n.append(c));
+  return n;
+}
+
+async function api(path, opts = {}) {
+  const init = { method: opts.method || 'GET', credentials: 'same-origin', headers: {} };
+  if (opts.body) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(opts.body); }
+  const res = await fetch('/api' + path, init);
+  let data = {};
+  try { data = await res.json(); } catch {}
+  if (res.status === 401 && path !== '/login') { showLogin(); throw new Error('auth'); }
+  if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+  return data;
+}
+
+function ago(s) {
+  s = Math.max(0, +s);
+  if (s < 60) return s + ' s ago';
+  if (s < 3600) return Math.floor(s / 60) + ' min ago';
+  return Math.floor(s / 3600) + ' h ago';
+}
+const pill = status => el('span', { class: 'pill ' + (status ? status.toLowerCase() : 'none'), text: status || 'No data' });
+
+function setChip(node, latest) {
+  let cls = 'idle', text = 'No signal';
+  if (latest) {
+    cls = latest.live ? 'live' : 'idle';
+    text = latest.live ? 'Live, updated ' + ago(latest.age) : 'No signal (Last updated ' + ago(latest.age) + ')';
+  }
+  node.className = 'chip ' + cls;
+  node.textContent = text;
+}
+
+function drawChart(cv, vals, low, high) {
+  const k = window.devicePixelRatio || 1;
+  const W = cv.width = cv.clientWidth * k, H = cv.height = cv.clientHeight * k;
+  const c = cv.getContext('2d');
+  c.clearRect(0, 0, W, H);
+  c.font = (12 * k) + 'px sans-serif';
+  if (vals.length < 2) { c.fillStyle = '#64748b'; c.fillText('Waiting for readings...', 16 * k, H / 2); return; }
+  const min = Math.min(40, low, ...vals) - 5, max = Math.max(120, high, ...vals) + 5;
+  const x = i => 38 * k + i * (W - 54 * k) / (vals.length - 1);
+  const y = v => H - 16 * k - (v - min) * (H - 32 * k) / (max - min);
+  c.fillStyle = 'rgba(22,163,74,.08)'; c.fillRect(38 * k, y(high), W - 54 * k, y(low) - y(high));
+  c.fillStyle = '#64748b'; c.fillText(high, 4 * k, y(high) + 4 * k); c.fillText(low, 4 * k, y(low) + 4 * k);
+  c.strokeStyle = '#ef4444'; c.lineWidth = 2.5 * k; c.lineJoin = 'round'; c.beginPath();
+  vals.forEach((v, i) => i ? c.lineTo(x(i), y(v)) : c.moveTo(x(i), y(v)));
+  c.stroke();
+}
+
+let timer = null;
+const poll = (fn, ms) => { clearInterval(timer); fn().catch(() => {}); timer = setInterval(() => fn().catch(() => {}), ms); };
+
+function say(text, kind) {
+  const m = $('msg');
+  m.hidden = !text; m.textContent = text || ''; m.className = 'msg ' + (kind || '');
+}
+function showLogin() {
+  clearInterval(timer);
+  $('app-view').hidden = true; $('login-view').hidden = false;
+  $('login-btn').disabled = false;
+}
+function enter(me) {
+  $('login-view').hidden = true; $('app-view').hidden = false;
+  $('who').textContent = me.name;
+  $('role').textContent = me.role === 'doctor' ? 'Doctor' : 'Patient';
+  $('user-avatar').textContent = me.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
+  $('patient-view').hidden = me.role !== 'patient';
+  $('doctor-view').hidden = me.role !== 'doctor';
+  if (me.role === 'patient') poll(loadPatient, 1500); else poll(loadDoctor, 1500);
+}
+
+$('login-form').addEventListener('submit', async e => {
+  e.preventDefault();
+  say('', ''); $('login-btn').disabled = true;
+  try {
+    const me = await api('/login', { method: 'POST', body: { username: $('username').value.trim(), password: $('password').value } });
+    $('password').value = '';
+    setTimeout(() => enter(me), 500);
+  } catch (err) {
+    say(err.message, 'err'); $('login-btn').disabled = false;
+  }
+});
+
+$('logout').addEventListener('click', async () => {
+  try { await api('/logout', { method: 'POST' }); } catch {}
+  location.reload();
+});
+
+async function loadPatient() {
+  const d = await api('/patient/me');
+  const L = d.latest;
+  
+  $('header-heading').textContent = `Patient Dashboard — ${d.name}`;
+  $('p-name').textContent = d.name;
+  setChip($('p-conn'), L);
+  
+  $('p-bpm').textContent = L ? L.bpm : '--';
+  
+  const s = $('p-status');
+  s.textContent = L ? L.status : 'No data';
+  s.className = 'pill ' + (L ? L.status.toLowerCase() : 'none');
+  
+  $('p-range').textContent = `Normal range ${d.min}-${d.max} BPM`;
+  $('p-when').textContent = L ? (L.displayTime + ' (' + ago(L.age) + ')') : 'None yet';
+  $('p-explain').textContent = L ? L.explanation : 'Place your finger on the sensor. Live readings and health interpretation will appear here instantly.';
+  
+  drawChart($('p-chart'), d.history.map(r => r.bpm).reverse(), d.min, d.max);
+  
+  $('p-rows').replaceChildren(...(d.history.length
+    ? d.history.map(r => el('tr', {}, el('td', { text: r.displayTime }), el('td', { text: r.bpm }), el('td', {}, pill(r.status))))
+    : [el('tr', {}, el('td', { colspan: 3, text: 'No readings recorded yet.' }))]));
+}
+
+let sel = 0, shown = 0;
+async function loadDoctor() {
+  $('header-heading').textContent = 'Doctor Monitoring Portal';
+  const [resData, alerts] = await Promise.all([api('/doctor/patients'), api('/doctor/alerts')]);
+  const pts = resData.patients;
+
+  $('s-patients').textContent = pts.length;
+  $('s-live').textContent = pts.filter(p => p.live).length;
+  $('s-alerts').textContent = alerts.length;
+
+  $('d-alerts').replaceChildren(...(alerts.length
+    ? alerts.map(a => el('div', { class: 'alert-box ' + a.status.toLowerCase() },
+        el('div', {}, el('strong', { text: a.name }), ` — Reading: ${a.bpm} BPM (${a.status})`, el('br'), el('span', { style: 'font-size:.8rem;color:var(--muted)', text: a.displayTime })),
+        el('button', { type: 'button', style: 'padding:6px 12px;background:var(--navy);color:#fff;border:none;border-radius:6px;cursor:pointer', text: 'Mark Seen', onclick: async () => { await api(`/doctor/alerts/${a.id}/ack`, { method: 'POST' }); loadDoctor(); } })))
+    : [el('p', { style: 'color:var(--muted);font-size:.9rem', text: 'No active threshold alerts.' })]));
+
+  $('d-rows').replaceChildren(...(pts.length
+    ? pts.map(p => {
+        return el('tr', { class: 'pick' + (p.patient_id === sel ? ' sel' : ''), onclick: () => { sel = p.patient_id; shown = 0; loadDoctor(); } },
+          el('td', { text: p.name }),
+          el('td', { text: p.bpm ?? '-' }),
+          el('td', {}, pill(p.status)),
+          el('td', { text: p.live ? 'Live (' + ago(p.age) + ')' : 'No signal (' + (p.age != null ? ago(p.age) : 'idle') + ')' })
+        );
+      })
+    : [el('tr', {}, el('td', { colspan: 4, text: 'No patients assigned.' }))]));
+
+  if (sel) {
+    const d = await api(`/doctor/patients/${sel}/readings`);
+    $('d-detail').hidden = false;
+    $('d-name').textContent = d.name + ' — History & Threshold Configuration';
+    if (shown !== sel) { $('d-min').value = d.min; $('d-max').value = d.max; shown = sel; }
+    drawChart($('d-chart'), d.history.map(r => r.bpm).reverse(), d.min, d.max);
+    $('d-hist').replaceChildren(...(d.history.length
+      ? d.history.map(r => el('tr', {}, el('td', { text: r.displayTime }), el('td', { text: r.bpm }), el('td', {}, pill(r.status))))
+      : [el('tr', {}, el('td', { colspan: 3, text: 'No readings recorded.' }))]));
+  }
+}
+
+$('d-thr').addEventListener('submit', async e => {
+  e.preventDefault();
+  try {
+    await api(`/doctor/patients/${sel}/thresholds`, { method: 'PUT', body: { min: +$('d-min').value, max: +$('d-max').value } });
+    $('d-thrmsg').textContent = 'Range saved.';
+  } catch (err) { $('d-thrmsg').textContent = err.message; }
+  shown = 0; loadDoctor().catch(() => {});
+});
+
+api('/me').then(enter).catch(() => {});
+</script>
+</body>
+</html>
