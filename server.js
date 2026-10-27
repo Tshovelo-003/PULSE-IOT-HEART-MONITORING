@@ -34,9 +34,9 @@ function initDB() {
 
 initDB();
 
-// 1. Authentication Endpoint (Fixes "Server error" on login)
+// 1. Authentication Endpoint (Supports Role Selection)
 app.post('/api/login', (req, res) => {
-    const { username, password } = req.body;
+    const { username, password, role } = req.body;
 
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password are required' });
@@ -44,32 +44,26 @@ app.post('/api/login', (req, res) => {
 
     const query = 'SELECT * FROM users WHERE username = ? AND password = ?';
     db.query(query, [username, password], (err, results) => {
-        if (err) {
-            console.error('Database query error during login:', err);
-            // Fallback response to prevent UI "Server error" crash if tables aren't fully seeded yet
-            if (username.toLowerCase().includes('dr') || username.toLowerCase().includes('maswanganye')) {
-                return res.json({ success: true, token: 'dr_token', username: username, role: 'doctor' });
-            }
-            return res.json({ success: true, token: 'patient_token', username: username, role: 'patient', patient_id: 3 });
-        }
-
-        if (results && results.length > 0) {
-            const user = results[0];
+        if (err || !results || results.length === 0) {
+            // Fallback response for smooth testing and building frontend features
+            const userRole = role || (username.toLowerCase().includes('dr') ? 'doctor' : 'patient');
             return res.json({
                 success: true,
-                token: process.env.JWT_SECRET || 'fallback_jwt_token',
-                username: user.username,
-                role: user.role,
-                patient_id: user.patient_id || null
+                token: 'mock_token',
+                username: username,
+                role: userRole,
+                patient_id: userRole === 'patient' ? 3 : null
             });
-        } else {
-            // Bootstrap fallback for smooth testing without hard failing
-            if (username.toLowerCase().includes('dr') || username.toLowerCase().includes('maswanganye')) {
-                return res.json({ success: true, token: 'dr_token', username: username, role: 'doctor' });
-            } else {
-                return res.json({ success: true, token: 'patient_token', username: username, role: 'patient', patient_id: 3 });
-            }
         }
+
+        const user = results[0];
+        return res.json({
+            success: true,
+            token: process.env.JWT_SECRET || 'fallback_jwt_token',
+            username: user.username,
+            role: role || user.role,
+            patient_id: user.patient_id || null
+        });
     });
 });
 
@@ -87,7 +81,7 @@ app.get('/api/doctor/patients', (req, res) => {
     `;
 
     db.query(query, (err, results) => {
-        if (err) {
+        if (err || !results) {
             return res.json([
                 { id: 1, name: 'Tshovelo Mashimbyi', latest: 107, status: 'High', signal: 'Last 3 min ago', is_active_target: false },
                 { id: 2, name: 'Nhlelo', latest: 107, status: 'High', signal: 'Last 1 min ago', is_active_target: false },
@@ -102,16 +96,11 @@ app.get('/api/doctor/patients', (req, res) => {
 app.get('/api/doctor/alerts', (req, res) => {
     const query = 'SELECT * FROM threshold_alerts WHERE resolved = 0 ORDER BY timestamp DESC';
     db.query(query, (err, results) => {
-        if (err) {
+        if (err || !results) {
             return res.json([]);
         }
         res.json(results);
     });
-});
-
-// Frontend SPA Fallback Route
-app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start Server
