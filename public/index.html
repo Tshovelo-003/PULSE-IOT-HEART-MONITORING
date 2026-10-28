@@ -3,33 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PulseSync - Telemetry Portal</title>
+    <title>PulseSync - Secure Telemetry Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; }
         
-        /* Layout Views */
         .view-section { display: none; height: 100vh; width: 100vw; }
         .view-section.active { display: flex; }
 
-        /* Login View (Split Screen) */
+        /* Login Split Screen */
         .login-container { display: flex; width: 100vw; height: 100vh; }
-        .left-pane { flex: 1; background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; padding: 40px; }
+        .left-pane { flex: 1; background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; }
         .right-pane { flex: 1; background: #111827; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 40px; }
         .login-card { width: 100%; max-width: 420px; }
         
-        /* Dashboard View */
-        .sidebar { width: 260px; height: 100vh; position: fixed; background: #ffffff; border-right: 1px solid #dee2e6; padding: 20px; }
+        /* Dashboard Layouts */
+        .sidebar { width: 260px; height: 100vh; position: fixed; background: #ffffff; border-right: 1px solid #dee2e6; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
         .main-content { margin-left: 260px; padding: 30px; width: calc(100% - 260px); height: 100vh; overflow-y: auto; }
 
-        /* Badges & Graphics */
-        .sensor-badge { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
-        .badge-live { background-color: #e6f4ea; color: #137333; }
-        .badge-offline { background-color: #f1f3f4; color: #5f6368; }
         .card-stat { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         .ecg-graphic { width: 180px; height: 180px; background-color: rgba(239, 68, 68, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; }
         .ecg-graphic svg { width: 110px; height: 110px; fill: #ef4444; }
+        .sensor-badge { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background-color: #f1f3f4; color: #5f6368; }
+        .badge-live { background-color: #e6f4ea; color: #137333; }
     </style>
 </head>
 <body>
@@ -37,38 +34,35 @@
     <!-- ================= 1. LOGIN VIEW ================= -->
     <div id="login-view" class="view-section active">
         <div class="login-container">
-            <!-- Left Pane: Form -->
             <div class="left-pane">
-                <div style="position: absolute; top: 20px; right: 30px;">
-                    <div id="sensor-status-badge" class="sensor-badge badge-offline"><span>•</span>&nbsp;No signal</div>
-                </div>
-
                 <div class="login-card">
                     <h3 class="fw-bold mb-1" style="color: #1f2937;">Welcome to Heart Rate Portal</h3>
-                    <p class="text-muted small mb-4">Sign in to access your telemetry dashboard</p>
+                    <p class="text-muted small mb-4">Secure authorization & role-based sign-in</p>
+
+                    <div id="login-error" class="alert alert-danger py-2 small d-none"></div>
 
                     <form id="login-form">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small text-secondary">Username</label>
-                            <input type="text" class="form-control py-2" id="username" placeholder="Enter username" required autocomplete="off">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold small text-secondary">Password</label>
-                            <input type="password" class="form-control py-2" id="password" placeholder="Enter password" required>
-                        </div>
-                        <div class="mb-4">
-                            <label class="form-label fw-semibold small text-secondary">Select Role</label>
-                            <select class="form-select py-2" id="role">
-                                <option value="patient">Patient</option>
-                                <option value="doctor">Doctor</option>
+                            <label class="form-label fw-semibold small text-secondary">Select Identity / Role</label>
+                            <select class="form-select py-2" id="auth-identity" required>
+                                <option value="" disabled selected>-- Choose Authorization Profile --</option>
+                                <option value="doctor">Dr Maswanganye (Doctor Portal)</option>
+                                <option value="Tshovelo Mashimbyi">Tshovelo Mashimbyi (Patient)</option>
+                                <option value="Nhlelo">Nhlelo (Patient)</option>
+                                <option value="Engetelo">Engetelo (Patient)</option>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm" style="background-color: #2563eb; border: none;">Sign In</button>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-secondary">Secure Password</label>
+                            <input type="password" class="form-control py-2" id="password" placeholder="Enter password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm" style="background-color: #2563eb; border: none;">Authorize & Sign In</button>
                     </form>
                 </div>
             </div>
 
-            <!-- Right Pane: Branding -->
             <div class="right-pane">
                 <div class="ecg-graphic">
                     <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
@@ -79,118 +73,271 @@
     </div>
 
 
-    <!-- ================= 2. DASHBOARD VIEW ================= -->
-    <div id="dashboard-view" class="view-section">
-        <!-- Sidebar -->
-        <div class="sidebar d-flex flex-column justify-content-between">
+    <!-- ================= 2. PATIENT DASHBOARD VIEW ================= -->
+    <div id="patient-dashboard-view" class="view-section">
+        <div class="sidebar">
             <div>
                 <h4 class="text-danger fw-bold mb-4">❤️ PulseSync</h4>
-                <div id="logged-user-name" class="fw-bold text-dark fs-5 mb-1">User</div>
-                <p id="logged-user-role" class="text-muted small text-uppercase">Patient</p>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action active rounded mb-2">Dashboard</a>
+                </div>
             </div>
             <div>
-                <button onclick="logout()" class="btn btn-outline-danger w-100 py-2">Sign Out</button>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-dark text-white rounded-circle p-2 fw-bold text-center me-2" style="width:38px;height:38px;" id="patient-avatar-initials">TM</div>
+                    <div>
+                        <div id="patient-logged-name" class="fw-bold text-dark small">Tshovelo Mashimbyi</div>
+                        <p class="text-muted text-uppercase mb-0" style="font-size: 0.7rem;">Patient</p>
+                    </div>
+                </div>
+                <button onclick="logout()" class="btn btn-outline-danger w-100 py-2 btn-sm">Sign Out</button>
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="main-content">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex justify-content-between align-items-start mb-4">
                 <div>
-                    <h2>Telemetry Dashboard</h2>
-                    <p class="text-muted small mb-0">Live hardware synchronization feed</p>
+                    <h2>Patient Dashboard</h2>
+                    <p class="text-muted small mb-0">Real-time biomedical telemetry monitoring system</p>
                 </div>
-                <div id="dash-sensor-badge" class="sensor-badge badge-offline"><span>•</span>&nbsp;No signal</div>
+                <div id="sensor-status-badge" class="sensor-badge">No signal</div>
             </div>
 
-            <!-- Telemetry Stats Cards -->
+            <h3 id="dashboard-patient-title" class="fw-bold mb-3">Tshovelo Mashimbyi</h3>
+
             <div class="row g-4 mb-4">
                 <div class="col-md-4">
                     <div class="card card-stat p-4 bg-white">
                         <span class="text-muted small fw-semibold">HEART RATE</span>
-                        <h2 id="dash-bpm" class="display-5 fw-bold text-danger my-2">-- BPM</h2>
-                        <span class="text-muted small">Normal range 60-100 BPM</span>
+                        <h2 id="patient-bpm" class="display-5 fw-bold text-dark my-2">-- <span class="fs-5 text-muted">BPM</span></h2>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card card-stat p-4 bg-white">
                         <span class="text-muted small fw-semibold">STATUS</span>
-                        <h4 id="dash-status" class="fw-bold text-secondary my-2">No data</h4>
-                        <span class="text-muted small">Automatic threshold check</span>
+                        <h4 id="patient-status" class="fw-bold text-secondary my-2">No data</h4>
+                        <span class="text-muted small">Normal range 60-100 BPM</span>
                     </div>
                 </div>
                 <div class="col-md-4">
                     <div class="card card-stat p-4 bg-white">
                         <span class="text-muted small fw-semibold">LAST READING</span>
-                        <h6 id="dash-time" class="fw-bold text-dark my-2">None yet</h6>
-                        <span class="text-muted small">NTP Clock Synchronized</span>
+                        <h6 id="patient-time" class="fw-bold text-dark my-2">None yet</h6>
                     </div>
+                </div>
+            </div>
+
+            <div class="card card-stat p-3 bg-white mb-4 border-start border-danger border-4">
+                <p id="alert-banner-text" class="mb-0 text-secondary small">Place your finger on the sensor. Live readings and health interpretation will appear here instantly.</p>
+            </div>
+
+            <div class="card card-stat p-4 bg-white">
+                <h5 class="fw-bold mb-3">Trend Overview & Historical Logs</h5>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                            <tr>
+                                <th>Date, Year</th>
+                                <th>Time</th>
+                                <th>BPM</th>
+                                <th>Status / Alerts</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patient-history-table">
+                            <tr><td colspan="4" class="text-center text-muted py-3">Waiting for readings...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================= 3. DOCTOR MONITORING PORTAL VIEW ================= -->
+    <div id="doctor-dashboard-view" class="view-section">
+        <div class="sidebar">
+            <div>
+                <h4 class="text-danger fw-bold mb-4">❤️ PulseSync</h4>
+                <div class="list-group list-group-flush">
+                    <a href="#" class="list-group-item list-group-item-action active rounded mb-2">Dashboard</a>
+                </div>
+            </div>
+            <div>
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-dark text-white rounded-circle p-2 fw-bold text-center me-2" style="width:38px;height:38px;">DM</div>
+                    <div>
+                        <div class="fw-bold text-dark small">Dr Maswanganye</div>
+                        <p class="text-muted text-uppercase mb-0" style="font-size: 0.7rem;">Doctor</p>
+                    </div>
+                </div>
+                <button onclick="logout()" class="btn btn-outline-danger w-100 py-2 btn-sm">Sign Out</button>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="mb-4">
+                <h2>Doctor Monitoring Portal</h2>
+                <p class="text-muted small mb-0">Real-time biomedical telemetry monitoring system</p>
+            </div>
+
+            <div class="card card-stat p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3">Patient Directory (Click a patient to inspect history and threshold alerts)</h5>
+                <div class="table-responsive">
+                    <table class="table align-middle table-hover" style="cursor: pointer;">
+                        <thead>
+                            <tr>
+                                <th>Patient Name</th>
+                                <th>Latest BPM</th>
+                                <th>Status</th>
+                                <th>Last Signal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="doctor-directory-body">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Handle Client-Side Login & View Switching
+        let currentUser = null;
+        let currentRole = null;
+        let selectedPatientView = null;
+
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const username = document.getElementById('username').value;
-            const role = document.getElementById('role').value;
+            const identity = document.getElementById('auth-identity').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('login-error');
 
             const res = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, role })
+                body: JSON.stringify({ identity, password })
             });
 
+            const data = await res.json();
             if (res.ok) {
-                document.getElementById('logged-user-name').innerText = username;
-                document.getElementById('logged-user-role').innerText = role;
-                
-                // Switch views without reloading
+                errorDiv.classList.add('d-none');
+                currentUser = data.username;
+                currentRole = data.role;
+
                 document.getElementById('login-view').classList.remove('active');
-                document.getElementById('dashboard-view').classList.add('active');
+
+                if (currentRole === 'doctor') {
+                    document.getElementById('doctor-dashboard-view').classList.add('active');
+                    loadDoctorDirectory();
+                } else {
+                    selectedPatientView = currentUser;
+                    loadPatientDashboard(currentUser);
+                    document.getElementById('patient-dashboard-view').classList.add('active');
+                }
+            } else {
+                errorDiv.innerText = data.error || "Authorization failed";
+                errorDiv.classList.remove('d-none');
             }
         });
 
         function logout() {
-            document.getElementById('dashboard-view').classList.remove('active');
-            document.getElementById('login-view').classList.add('active');
+            window.location.reload();
         }
 
-        // Live Hardware & Badge Polling
-        async function pollTelemetry() {
+        async function loadDoctorDirectory() {
             try {
-                const res = await fetch('/api/arduino/status');
-                const data = await res.json();
+                const res = await fetch('/api/patients/all');
+                const patients = await res.json();
+                const tbody = document.getElementById('doctor-directory-body');
+                tbody.innerHTML = '';
 
-                if (data.last_bpm) {
-                    document.getElementById('dash-bpm').innerText = `${data.last_bpm} BPM`;
-                    let status = data.last_bpm > 100 ? "High" : data.last_bpm < 60 ? "Low" : "Normal";
-                    document.getElementById('dash-status').innerText = status;
-                }
-                if (data.last_updated) {
-                    document.getElementById('dash-time').innerText = new Date(data.last_updated).toLocaleTimeString();
-                    
-                    const diffSec = Math.floor((new Date() - new Date(data.last_updated)) / 1000);
-                    const badgeElements = [document.getElementById('sensor-status-badge'), document.getElementById('dash-sensor-badge')];
-                    
-                    badgeElements.forEach(badge => {
-                        if (diffSec > 10) {
-                            badge.className = "sensor-badge badge-offline";
-                            badge.innerHTML = "<span>•</span>&nbsp;No signal";
-                        } else {
-                            badge.className = "sensor-badge badge-live";
-                            badge.innerHTML = "<span>•</span>&nbsp;Live Sensor Feed";
-                        }
-                    });
-                }
+                patients.forEach(p => {
+                    const tr = document.createElement('tr');
+                    tr.onclick = () => {
+                        selectedPatientView = p.name;
+                        document.getElementById('doctor-dashboard-view').classList.remove('active');
+                        loadPatientDashboard(p.name);
+                        document.getElementById('patient-dashboard-view').classList.add('active');
+                    };
+
+                    let badgeClass = "bg-secondary";
+                    if (p.status === "High") badgeClass = "bg-danger";
+                    else if (p.status === "Low") badgeClass = "bg-warning text-dark";
+                    else if (p.status === "Normal") badgeClass = "bg-success";
+
+                    tr.innerHTML = `
+                        <td class="fw-bold text-primary">${p.name}</td>
+                        <td>${p.bpm}</td>
+                        <td><span class="badge ${badgeClass}">${p.status}</span></td>
+                        <td class="text-muted small">${p.lastSignal}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
             } catch (err) {
-                console.error("Polling error", err);
+                console.error("Error loading doctor directory", err);
             }
         }
 
-        setInterval(pollTelemetry, 2000);
+        async function loadPatientDashboard(patientName) {
+            document.getElementById('dashboard-patient-title').innerText = patientName;
+            document.getElementById('patient-logged-name').innerText = patientName;
+            document.getElementById('patient-avatar-initials').innerText = patientName.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+
+            try {
+                const res = await fetch(`/api/patients/record?name=${encodeURIComponent(patientName)}`);
+                const data = await res.json();
+
+                document.getElementById('patient-bpm').innerHTML = `${data.bpm} <span class="fs-5 text-muted">BPM</span>`;
+                document.getElementById('patient-status').innerText = data.status;
+                document.getElementById('patient-time').innerText = data.lastSignal;
+
+                const badge = document.getElementById('sensor-status-badge');
+                if (data.status !== "No data" && data.status !== "No signal") {
+                    badge.className = "sensor-badge badge-live";
+                    badge.innerText = "• Live Sensor Feed";
+                } else {
+                    badge.className = "sensor-badge";
+                    badge.innerText = "No signal";
+                }
+
+                const alertBanner = document.getElementById('alert-banner-text');
+                if (data.status === "High") {
+                    alertBanner.innerHTML = `<strong>Tachycardia alert:</strong> Heart rate (${data.bpm}) exceeds threshold (100 BPM).`;
+                } else if (data.status === "Low") {
+                    alertBanner.innerHTML = `<strong>Bradycardia alert:</strong> Heart rate (${data.bpm}) falls below threshold (60 BPM).`;
+                } else {
+                    alertBanner.innerHTML = "No active threshold breaches for this patient.";
+                }
+
+                const historyTable = document.getElementById('patient-history-table');
+                historyTable.innerHTML = '';
+                if (data.history && data.history.length > 0) {
+                    data.history.forEach(h => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${h.date}</td>
+                            <td>${h.time}</td>
+                            <td class="fw-bold">${h.bpm}</td>
+                            <td><span class="badge ${h.status === 'High' ? 'bg-danger' : h.status === 'Low' ? 'bg-warning text-dark' : 'bg-success'}">${h.status}</span></td>
+                        `;
+                        historyTable.appendChild(row);
+                    });
+                } else {
+                    historyTable.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No historical logs recorded yet.</td></tr>`;
+                }
+            } catch (err) {
+                console.error("Error loading patient record", err);
+            }
+        }
+
+        // Periodic background poll
+        setInterval(() => {
+            if (currentRole === 'doctor' && document.getElementById('doctor-dashboard-view').classList.contains('active')) {
+                loadDoctorDirectory();
+            } else if (currentRole === 'patient' && selectedPatientView && document.getElementById('patient-dashboard-view').classList.contains('active')) {
+                loadPatientDashboard(selectedPatientView);
+            }
+        }, 3000);
     </script>
 </body>
 </html>
