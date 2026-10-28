@@ -6,33 +6,93 @@
     <title>PulseSync - Real-Time Telemetry Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { 
-            background-color: #f8f9fa; 
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .login-wrapper {
-            min-height: 100vh;
+        body, html {
+            height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            overflow: hidden;
+        }
+        .main-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+        /* Left Column: Login Section */
+        .left-pane {
+            flex: 1;
+            background-color: #ffffff;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            position: relative;
+            padding: 40px;
         }
         .top-status-container {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+        }
+        .login-card {
             width: 100%;
-            max-width: 450px;
+            max-width: 420px;
+            padding: 20px;
+        }
+        .lock-icon-container {
+            width: 55px;
+            height: 55px;
+            background-color: #e8f0fe;
+            border-radius: 50%;
             display: flex;
-            justify-content: flex-end;
-            margin-bottom: 10px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
         }
-        .login-card { 
-            width: 100%;
-            max-width: 450px; 
-            padding: 35px; 
-            background: white; 
-            border-radius: 12px; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.06); 
+        .lock-icon-container svg {
+            width: 24px;
+            height: 24px;
+            fill: #1a73e8;
         }
+        /* Right Column: Branding / Graphic Section */
+        .right-pane {
+            flex: 1;
+            background-color: #111827; /* Dark navy */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+        .ecg-graphic {
+            width: 180px;
+            height: 180px;
+            background-color: rgba(239, 68, 68, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .ecg-graphic svg {
+            width: 110px;
+            height: 110px;
+            fill: #ef4444;
+        }
+        .right-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #ffffff;
+            letter-spacing: 0.5px;
+        }
+        /* Sensor Status Badge */
         .sensor-badge { 
             display: inline-flex; 
             align-items: center; 
@@ -49,74 +109,72 @@
             background-color: #f1f3f4; 
             color: #5f6368; 
         }
-        .lock-icon-container {
-            width: 60px;
-            height: 60px;
-            background-color: #e8f0fe;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px auto;
-        }
-        .lock-icon-container svg {
-            width: 28px;
-            height: 28px;
-            fill: #1a73e8;
-        }
     </style>
 </head>
 <body>
 
-    <div class="login-wrapper">
-        <!-- Dynamic Sensor Status Header Badge -->
-        <div class="top-status-container">
-            <div id="sensor-status-badge" class="sensor-badge badge-offline">
-                <span>•</span>&nbsp;No signal
-            </div>
-        </div>
-
-        <!-- Secure Login Card -->
-        <div class="login-card">
-            <div class="lock-icon-container">
-                <!-- Secure Padlock Icon SVG -->
-                <svg viewBox="0 0 24 24">
-                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-                </svg>
-            </div>
-
-            <div class="text-center mb-4">
-                <h4 class="fw-bold">Welcome to Heart Rate Portal</h4>
-                <p class="text-muted small">Sign in to access your telemetry dashboard</p>
-            </div>
-
-            <!-- Login Form -->
-            <form action="/api/login" method="POST">
-                <div class="mb-3">
-                    <label for="username" class="form-label fw-semibold small text-secondary">Username</label>
-                    <input type="text" class="form-control" id="username" name="username" placeholder="Enter username" required autocomplete="off">
+    <div class="main-container">
+        
+        <!-- LEFT PANE: Login Form -->
+        <div class="left-pane">
+            <!-- Dynamic Hardware Status Badge -->
+            <div class="top-status-container">
+                <div id="sensor-status-badge" class="sensor-badge badge-offline">
+                    <span>•</span>&nbsp;No signal
                 </div>
+            </div>
 
-                <div class="mb-3">
-                    <label for="password" class="form-label fw-semibold small text-secondary">Password</label>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="Enter password" required>
+            <div class="login-card">
+                <div class="lock-icon-container">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                    </svg>
                 </div>
 
                 <div class="mb-4">
-                    <label for="role" class="form-label fw-semibold small text-secondary">Select Role</label>
-                    <select class="form-select" id="role" name="role">
-                        <option value="patient">Patient</option>
-                        <option value="doctor">Doctor</option>
-                    </select>
+                    <h3 class="fw-bold mb-1" style="color: #1f2937;">Welcome to Heart Rate Portal</h3>
+                    <p class="text-muted small">Sign in to access your telemetry dashboard</p>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">Sign In</button>
-            </form>
+                <form action="/api/login" method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-semibold small text-secondary">Username</label>
+                        <input type="text" class="form-control py-2" id="username" name="username" placeholder="Enter username" required autocomplete="off">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label fw-semibold small text-secondary">Password</label>
+                        <input type="password" class="form-control py-2" id="password" name="password" placeholder="Enter password" required>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="role" class="form-label fw-semibold small text-secondary">Select Role</label>
+                        <select class="form-select py-2" id="role" name="role">
+                            <option value="patient">Patient</option>
+                            <option value="doctor">Doctor</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm" style="background-color: #2563eb; border: none;">Sign In</button>
+                </form>
+            </div>
         </div>
+
+        <!-- RIGHT PANE: Branding / Heart Graphic Banner -->
+        <div class="right-pane">
+            <div class="ecg-graphic">
+                <!-- Heart & ECG Wave SVG Graphic -->
+                <svg viewBox="0 0 24 24">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
+            </div>
+            <h2 class="right-title">Real-Time Doctor & Patient Telemetry Portal</h2>
+        </div>
+
     </div>
 
     <script>
-        // Dynamic Frontend Sensor Badge Updater based on Hardware Feed
+        // Dynamic Sensor Badge Updater
         function checkSensorFeed(lastUpdatedTime) {
             const badge = document.getElementById('sensor-status-badge');
             if (!lastUpdatedTime) {
@@ -138,18 +196,17 @@
             }
         }
 
-        // Poll backend session and hardware telemetry status every 3 seconds
+        // Poll backend hardware status every 3 seconds
         async function fetchSensorStatus() {
             try {
                 const response = await fetch('/api/arduino/status');
                 const data = await response.json();
                 checkSensorFeed(data.last_updated);
             } catch (err) {
-                console.error("Error communicating with telemetry endpoint", err);
+                console.error("Error checking hardware status", err);
             }
         }
 
-        // Initial check and interval polling loop
         fetchSensorStatus();
         setInterval(fetchSensorStatus, 3000);
     </script>
