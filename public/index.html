@@ -4,325 +4,154 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PulseSync - Real-Time Telemetry Portal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background: #f4f7f6; color: #333; }
-        
-        #login-section { display: flex; height: 100vh; background: #0f172a; }
-        .login-box { width: 450px; background: white; padding: 50px; display: flex; flex-direction: column; justify-content: center; box-shadow: 10px 0 25px rgba(0,0,0,0.3); z-index: 10; }
-        .login-banner { flex: 1; background: #0f172a; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; text-align: center; padding: 20px; }
-        .login-banner h1 { font-size: 28px; margin-top: 20px; font-weight: bold; }
-        .login-banner p { margin-top: 10px; color: #94a3b8; font-size: 16px; }
-        .heart-container { position: relative; width: 120px; height: 120px; display: flex; align-items: center; justify-content: center; }
-        
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: #1e293b; }
-        .form-group input, .form-group select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 15px; outline: none; }
-        .btn { width: 100%; padding: 14px; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; transition: 0.2s; }
-        .btn:hover { background: #1d4ed8; }
-
-        #app-section { display: none; height: 100vh; display: flex; }
-        .sidebar { width: 260px; background: #ffffff; border-right: 1px solid #e2e8f0; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; }
-        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-        .header { background: white; padding: 20px 30px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; }
-        
-        .dashboard-body { padding: 30px; }
-        .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        .alert-banner { background: #fee2e2; color: #dc2626; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 500; border-left: 5px solid #dc2626; }
-        
-        table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-        th, td { padding: 14px 16px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; }
-        th { background: #f8fafc; font-weight: 600; }
-        tr:hover { background: #f1f5f9; cursor: pointer; }
-        .badge-high { background: #fee2e2; color: #dc2626; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        .badge-normal { background: #dcfce7; color: #15803d; padding: 4px 8px; border-radius: 4px; font-weight: bold; }
-        canvas { width: 100%; height: 200px; background: #111; border-radius: 8px; margin-top: 15px; }
+        body { 
+            background-color: #f8f9fa; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+        }
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .top-status-container {
+            width: 100%;
+            max-width: 450px;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+        .login-card { 
+            width: 100%;
+            max-width: 450px; 
+            padding: 35px; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06); 
+        }
+        .sensor-badge { 
+            display: inline-flex; 
+            align-items: center; 
+            padding: 6px 14px; 
+            border-radius: 20px; 
+            font-size: 0.85rem; 
+            font-weight: 600; 
+        }
+        .badge-live { 
+            background-color: #e6f4ea; 
+            color: #137333; 
+        }
+        .badge-offline { 
+            background-color: #f1f3f4; 
+            color: #5f6368; 
+        }
+        .lock-icon-container {
+            width: 60px;
+            height: 60px;
+            background-color: #e8f0fe;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px auto;
+        }
+        .lock-icon-container svg {
+            width: 28px;
+            height: 28px;
+            fill: #1a73e8;
+        }
     </style>
 </head>
 <body>
 
-    <!-- LOGIN SCREEN (Screenshot 488 Exact Match) -->
-    <div id="login-section">
-        <div class="login-box">
-            <div style="text-align: center; margin-bottom: 25px;">
-                <div style="width: 50px; height: 50px; background: #eff6ff; color: #2563eb; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 10px;">🔒</div>
-                <h2 style="color: #1e293b; font-size: 22px;">Welcome to Heart Rate Portal</h2>
-                <p style="color: #64748b; font-size: 13px; margin-top: 5px;">Sign in to access your telemetry dashboard</p>
+    <div class="login-wrapper">
+        <!-- Dynamic Sensor Status Header Badge -->
+        <div class="top-status-container">
+            <div id="sensor-status-badge" class="sensor-badge badge-offline">
+                <span>•</span>&nbsp;No signal
             </div>
-            <form id="login-form">
-                <div class="form-group">
-                    <label>Username</label>
-                    <input type="text" id="username" required placeholder="Dr Maswanganye or Patient Name">
+        </div>
+
+        <!-- Secure Login Card -->
+        <div class="login-card">
+            <div class="lock-icon-container">
+                <!-- Secure Padlock Icon SVG -->
+                <svg viewBox="0 0 24 24">
+                    <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0-2-.9-2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
+                </svg>
+            </div>
+
+            <div class="text-center mb-4">
+                <h4 class="fw-bold">Welcome to Heart Rate Portal</h4>
+                <p class="text-muted small">Sign in to access your telemetry dashboard</p>
+            </div>
+
+            <!-- Login Form -->
+            <form action="/api/login" method="POST">
+                <div class="mb-3">
+                    <label for="username" class="form-label fw-semibold small text-secondary">Username</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="Enter username" required autocomplete="off">
                 </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <input type="password" id="password" required placeholder="••••••••">
+
+                <div class="mb-3">
+                    <label for="password" class="form-label fw-semibold small text-secondary">Password</label>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Enter password" required>
                 </div>
-                <div class="form-group">
-                    <label>Select Role</label>
-                    <select id="role-select">
+
+                <div class="mb-4">
+                    <label for="role" class="form-label fw-semibold small text-secondary">Select Role</label>
+                    <select class="form-select" id="role" name="role">
                         <option value="patient">Patient</option>
                         <option value="doctor">Doctor</option>
                     </select>
                 </div>
-                <button type="submit" class="btn">Sign In</button>
+
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">Sign In</button>
             </form>
-        </div>
-        <div class="login-banner">
-            <div class="heart-container">
-                <svg width="100" height="100" viewBox="0 0 24 24" fill="#ef4444" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
-            </div>
-            <svg width="240" height="40" viewBox="0 0 240 40" stroke="#ef4444" stroke-width="3" fill="none" style="margin: 15px 0;">
-                <path d="M0 20h60l10-15 15 30 15-25 10 10h120"/>
-            </svg>
-            <h1>Real-Time Doctor & Patient Telemetry Portal</h1>
-            <p>IoT Biomedical Research & Patient Monitoring System</p>
-        </div>
-    </div>
-
-    <!-- MAIN DASHBOARD -->
-    <div id="app-section" style="display: none;">
-        <div class="sidebar">
-            <div>
-                <h3 style="color: #ef4444; margin-bottom: 30px;">❤️ PulseSync</h3>
-                <p id="user-display" style="font-size: 14px; color: #64748b; font-weight: bold;"></p>
-            </div>
-            <button onclick="logout()" class="btn" style="background: #ef4444;">Sign Out</button>
-        </div>
-
-        <div class="main-content">
-            <div class="header">
-                <div>
-                    <h2 id="portal-title">Dashboard</h2>
-                    <p style="font-size: 12px; color: #64748b; margin-top: 2px;">Real-time biomedical telemetry monitoring system</p>
-                </div>
-                <span id="live-indicator" style="color: #10b981; font-weight: bold;">● Live IoT Feed Active</span>
-            </div>
-
-            <!-- DOCTOR MONITORING PORTAL -->
-            <div id="doctor-dashboard" class="dashboard-body" style="display: none;">
-                <div class="card-grid">
-                    <div class="card"><h3>ASSIGNED PATIENTS</h3><p style="font-size: 28px; font-weight: bold; margin-top: 10px;">3</p></div>
-                    <div class="card"><h3>SENDING LIVE DATA</h3><p id="live-data-count" style="font-size: 28px; font-weight: bold; color: #10b981; margin-top: 10px;">0</p></div>
-                    <div class="card"><h3>OPEN ALERTS</h3><p id="doc-alert-count" style="font-size: 28px; font-weight: bold; color: #dc2626; margin-top: 10px;">0</p></div>
-                </div>
-
-                <h3>Patient Directory <span style="font-size: 13px; color: #64748b; font-weight: normal;">(Click any patient row to inspect historical reports and threshold alerts)</span></h3>
-                <div style="margin-top: 15px;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Patient Name</th>
-                                <th>Latest BPM</th>
-                                <th>Status</th>
-                                <th>Last Signal</th>
-                            </tr>
-                        </thead>
-                        <tbody id="doctor-patient-table"></tbody>
-                    </table>
-                </div>
-
-                <div id="selected-patient-report" style="margin-top: 30px; display: none;" class="card">
-                    <h3 id="report-title">Patient Report</h3>
-                    <div id="report-alerts" style="margin-top: 15px;"></div>
-                    <h4 style="margin-top: 20px;">Historical Logs (Date, Year, Time & BPM)</h4>
-                    <table style="margin-top: 10px;">
-                        <thead><tr><th>Date</th><th>Time</th><th>BPM</th><th>Status</th></tr></thead>
-                        <tbody id="report-history-table"></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- PATIENT DASHBOARD -->
-            <div id="patient-dashboard" class="dashboard-body" style="display: none;">
-                <div class="card" style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                    <h2 id="patient-name-header" style="color: #1e293b;">Patient Name</h2>
-                    <span id="p-signal-badge" style="background: #e2e8f0; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 600;">● Live Sensor Feed</span>
-                </div>
-
-                <div class="card-grid">
-                    <div class="card">
-                        <h3>HEART RATE</h3>
-                        <p id="p-bpm" style="font-size: 32px; font-weight: bold; color: #ef4444; margin-top: 10px;">-- BPM</p>
-                    </div>
-                    <div class="card">
-                        <h3>STATUS</h3>
-                        <p id="p-status" style="font-size: 24px; font-weight: bold; margin-top: 10px;">No data</p>
-                        <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Normal range 60-100 BPM</p>
-                    </div>
-                    <div class="card">
-                        <h3>LAST READING</h3>
-                        <p id="p-last-reading" style="font-size: 14px; margin-top: 15px; color: #64748b;">None yet</p>
-                    </div>
-                </div>
-
-                <div id="patient-alert-box" class="alert-banner" style="display: none;"></div>
-
-                <div class="card">
-                    <h3>Trend Overview</h3>
-                    <canvas id="live-pulse-canvas"></canvas>
-                </div>
-            </div>
         </div>
     </div>
 
     <script>
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            const role = document.getElementById('role-select').value;
-
-            const res = await fetch('/api/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password, role })
-            });
-            const data = await res.json();
-
-            if (res.ok && data.success) {
-                localStorage.setItem('session', JSON.stringify(data));
-                loadApp(data);
-            } else {
-                alert(data.error || 'Login authorization failed.');
+        // Dynamic Frontend Sensor Badge Updater based on Hardware Feed
+        function checkSensorFeed(lastUpdatedTime) {
+            const badge = document.getElementById('sensor-status-badge');
+            if (!lastUpdatedTime) {
+                badge.className = "sensor-badge badge-offline";
+                badge.innerHTML = "<span>•</span>&nbsp;No signal";
+                return;
             }
-        });
 
-        function loadApp(session) {
-            document.getElementById('login-section').style.display = 'none';
-            document.getElementById('app-section').style.display = 'flex';
-            document.getElementById('user-display').innerText = `${session.username}\n${session.role.toUpperCase()}`;
+            const now = new Date();
+            const lastActive = new Date(lastUpdatedTime);
+            const diffSeconds = Math.floor((now - lastActive) / 1000);
 
-            if (session.role === 'doctor') {
-                document.getElementById('portal-title').innerText = 'Doctor Monitoring Portal';
-                document.getElementById('doctor-dashboard').style.display = 'block';
-                loadDoctorDirectory();
-                setInterval(loadDoctorDirectory, 3000);
+            if (diffSeconds > 10) {
+                badge.className = "sensor-badge badge-offline";
+                badge.innerHTML = `<span>•</span>&nbsp;No signal (Last updated ${diffSeconds}s ago)`;
             } else {
-                document.getElementById('portal-title').innerText = 'Patient Dashboard';
-                document.getElementById('patient-name-header').innerText = session.username;
-                document.getElementById('patient-dashboard').style.display = 'block';
-                startPatientLiveFeed(session.patient_id || 3);
+                badge.className = "sensor-badge badge-live";
+                badge.innerHTML = "<span>•</span>&nbsp;Live Sensor Feed";
             }
         }
 
-        async function loadDoctorDirectory() {
-            const res = await fetch('/api/doctor/patients');
-            const patients = await res.json();
-            const tbody = document.getElementById('doctor-patient-table');
-            tbody.innerHTML = '';
-
-            patients.forEach(p => {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td><strong>${p.name}</strong></td>
-                    <td>${p.latest}</td>
-                    <td><span class="${p.status === 'High' || p.status === 'Critical' ? 'badge-high' : 'badge-normal'}">${p.status}</span></td>
-                    <td>${p.signal}</td>
-                `;
-                tr.onclick = () => loadPatientReport(p.id, p.name);
-                tbody.appendChild(tr);
-            });
-
-            const statsRes = await fetch('/api/doctor/stats');
-            const stats = await statsRes.json();
-            document.getElementById('live-data-count').innerText = stats.live_count;
-        }
-
-        async function loadPatientReport(patientId, patientName) {
-            const reportBox = document.getElementById('selected-patient-report');
-            reportBox.style.display = 'block';
-            document.getElementById('report-title').innerText = `Clinical Report for: ${patientName}`;
-
-            const res = await fetch(`/api/doctor/patient/${patientId}/history`);
-            const data = await res.json();
-
-            const alertBox = document.getElementById('report-alerts');
-            if (data.alerts.length > 0) {
-                alertBox.innerHTML = data.alerts.map(a => `<div class="alert-banner">⚠️ ${a.message} (Timestamp: ${a.timestamp})</div>`).join('');
-            } else {
-                alertBox.innerHTML = '<div style="color: #15803d; font-weight: 500;">No active threshold breaches for this patient.</div>';
-            }
-
-            const historyTbody = document.getElementById('report-history-table');
-            if (data.history.length === 0) {
-                historyTbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#64748b;">No telemetry records yet. Place finger on MAX30102 sensor.</td></tr>`;
-            } else {
-                historyTbody.innerHTML = data.history.map(h => `
-                    <tr>
-                        <td>${h.date}</td>
-                        <td>${h.time}</td>
-                        <td><strong>${h.bpm} BPM</strong></td>
-                        <td><span class="${h.status === 'High' ? 'badge-high' : 'badge-normal'}">${h.status}</span></td>
-                    </tr>
-                `).join('');
+        // Poll backend session and hardware telemetry status every 3 seconds
+        async function fetchSensorStatus() {
+            try {
+                const response = await fetch('/api/arduino/status');
+                const data = await response.json();
+                checkSensorFeed(data.last_updated);
+            } catch (err) {
+                console.error("Error communicating with telemetry endpoint", err);
             }
         }
 
-        function startPatientLiveFeed(patientId) {
-            setInterval(async () => {
-                try {
-                    const res = await fetch(`/api/patient/live/${patientId}`);
-                    const data = await res.json();
-                    
-                    document.getElementById('p-bpm').innerText = data.bpm !== '--' ? `${data.bpm} BPM` : '-- BPM';
-                    const statusEl = document.getElementById('p-status');
-                    statusEl.innerText = data.status;
-                    statusEl.style.color = data.status === 'High' ? '#dc2626' : '#15803d';
-                    document.getElementById('p-last-reading').innerText = data.last_reading;
-
-                    const alertBox = document.getElementById('patient-alert-box');
-                    if (data.status === 'High') {
-                        alertBox.style.display = 'block';
-                        alertBox.innerText = `Tachycardia alert: Your heart rate (${data.bpm} BPM) exceeds threshold (100 BPM).`;
-                    } else if (data.status === 'Low') {
-                        alertBox.style.display = 'block';
-                        alertBox.innerText = `Bradycardia alert: Your heart rate (${data.bpm} BPM) is below threshold (60 BPM).`;
-                    } else {
-                        alertBox.style.display = 'none';
-                    }
-
-                    if (data.trend && data.trend.length > 0) {
-                        drawLivePulseGraph(data.trend);
-                    }
-                } catch (err) {
-                    console.error('Error fetching live telemetry', err);
-                }
-            }, 3000);
-        }
-
-        function drawLivePulseGraph(trendData) {
-            const canvas = document.getElementById('live-pulse-canvas');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            ctx.strokeStyle = '#ef4444';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-
-            let xStep = canvas.width / (trendData.length - 1 || 1);
-            trendData.forEach((val, i) => {
-                let y = canvas.height - ((val - 40) / 100) * canvas.height;
-                if (i === 0) ctx.moveTo(i * xStep, y);
-                else ctx.lineTo(i * xStep, y);
-            });
-            ctx.stroke();
-        }
-
-        async function logout() {
-            await fetch('/api/logout', { method: 'POST' });
-            localStorage.removeItem('session');
-            window.location.reload();
-        }
-
-        window.onload = () => {
-            const session = JSON.parse(localStorage.getItem('session'));
-            if (session) loadApp(session);
-        };
+        // Initial check and interval polling loop
+        fetchSensorStatus();
+        setInterval(fetchSensorStatus, 3000);
     </script>
 </body>
 </html>
