@@ -36,16 +36,13 @@ function verifyDeviceKey(req, res, next) {
 
 // --- HARDWARE API ENDPOINTS ---
 
-// Arduino polls this to check which patient session is active
 app.get('/api/arduino/status', (req, res) => {
     res.json(activeSession);
 });
 
-// Arduino posts live telemetry here
 app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
     const { patient_id, name, bpm, raw_signal, timestamp } = req.body;
     
-    // Determine status based on BPM thresholds
     let status = "Normal";
     if (bpm > 100) status = "High";
     else if (bpm < 60) status = "Low";
@@ -53,7 +50,6 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
     const currentTime = timestamp || new Date().toLocaleTimeString();
     const currentDate = new Date().toLocaleDateString();
 
-    // Update active session state
     activeSession = {
         patient_id,
         name,
@@ -62,7 +58,6 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
         last_updated: new Date()
     };
 
-    // Update patient record and push to history
     if (patientsData[patient_id]) {
         patientsData[patient_id].bpm = `${bpm} BPM`;
         patientsData[patient_id].status = status;
@@ -75,7 +70,6 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
             status: status
         });
 
-        // Keep history array trimmed to last 20 logs
         if (patientsData[patient_id].history.length > 20) {
             patientsData[patient_id].history.pop();
         }
@@ -89,10 +83,17 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
 
 // Login page
 app.get('/', (req, res) => {
-    res.render('index');
+    res.render('index', (err, html) => {
+        if (err) {
+            console.error("Error rendering 'index':", err);
+            res.status(500).send("Template Error: Make sure index.ejs exists in your views folder.");
+        } else {
+            res.send(html);
+        }
+    });
 });
 
-// Handle login and set active session
+// Handle login
 app.post('/api/login', (req, res) => {
     const { username, role } = req.body;
     let patientId = username === "Tshovelo" ? 1 : username === "Nhlelo" ? 2 : username === "Engetelo" ? 3 : 1;
@@ -108,21 +109,36 @@ app.post('/api/login', (req, res) => {
     }
 });
 
-// Patient Dashboard Route
+// Patient Dashboard Route with Safe Error Handling
 app.get('/patient-dashboard', (req, res) => {
     const currentPatient = patientsData[activeSession.patient_id] || patientsData[1];
+    
     res.render('patient-dashboard', { 
         activeUser: activeSession.name, 
         patient: currentPatient,
         patients: patientsData 
+    }, (err, html) => {
+        if (err) {
+            console.error("Error rendering 'patient-dashboard':", err);
+            res.status(500).send(`Template Error: Could not find 'patient-dashboard.ejs' in your views folder. Details: ${err.message}`);
+        } else {
+            res.send(html);
+        }
     });
 });
 
-// Doctor Dashboard Route
+// Doctor Dashboard Route with Safe Error Handling
 app.get('/doctor-dashboard', (req, res) => {
     res.render('doctor-dashboard', { 
         activeSession: activeSession,
         patients: patientsData 
+    }, (err, html) => {
+        if (err) {
+            console.error("Error rendering 'doctor-dashboard':", err);
+            res.status(500).send(`Template Error: Could not find 'doctor-dashboard.ejs' in your views folder. Details: ${err.message}`);
+        } else {
+            res.send(html);
+        }
     });
 });
 
