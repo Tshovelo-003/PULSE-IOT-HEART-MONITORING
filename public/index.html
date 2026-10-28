@@ -3,212 +3,194 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PulseSync - Real-Time Telemetry Portal</title>
+    <title>PulseSync - Telemetry Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body, html {
-            height: 100vh;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
-            overflow: hidden;
-        }
-        .main-container {
-            display: flex;
-            height: 100vh;
-            width: 100vw;
-        }
-        /* Left Column: Login Section */
-        .left-pane {
-            flex: 1;
-            background-color: #ffffff;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            position: relative;
-            padding: 40px;
-        }
-        .top-status-container {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-        }
-        .login-card {
-            width: 100%;
-            max-width: 420px;
-            padding: 20px;
-        }
-        .lock-icon-container {
-            width: 55px;
-            height: 55px;
-            background-color: #e8f0fe;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-        .lock-icon-container svg {
-            width: 24px;
-            height: 24px;
-            fill: #1a73e8;
-        }
-        /* Right Column: Branding / Graphic Section */
-        .right-pane {
-            flex: 1;
-            background-color: #111827; /* Dark navy */
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            text-align: center;
-            padding: 40px;
-        }
-        .ecg-graphic {
-            width: 180px;
-            height: 180px;
-            background-color: rgba(239, 68, 68, 0.1);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-bottom: 30px;
-            position: relative;
-        }
-        .ecg-graphic svg {
-            width: 110px;
-            height: 110px;
-            fill: #ef4444;
-        }
-        .right-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #ffffff;
-            letter-spacing: 0.5px;
-        }
-        /* Sensor Status Badge */
-        .sensor-badge { 
-            display: inline-flex; 
-            align-items: center; 
-            padding: 6px 14px; 
-            border-radius: 20px; 
-            font-size: 0.85rem; 
-            font-weight: 600; 
-        }
-        .badge-live { 
-            background-color: #e6f4ea; 
-            color: #137333; 
-        }
-        .badge-offline { 
-            background-color: #f1f3f4; 
-            color: #5f6368; 
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; }
+        
+        /* Layout Views */
+        .view-section { display: none; height: 100vh; width: 100vw; }
+        .view-section.active { display: flex; }
+
+        /* Login View (Split Screen) */
+        .login-container { display: flex; width: 100vw; height: 100vh; }
+        .left-pane { flex: 1; background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; padding: 40px; }
+        .right-pane { flex: 1; background: #111827; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 40px; }
+        .login-card { width: 100%; max-width: 420px; }
+        
+        /* Dashboard View */
+        .sidebar { width: 260px; height: 100vh; position: fixed; background: #ffffff; border-right: 1px solid #dee2e6; padding: 20px; }
+        .main-content { margin-left: 260px; padding: 30px; width: calc(100% - 260px); height: 100vh; overflow-y: auto; }
+
+        /* Badges & Graphics */
+        .sensor-badge { display: inline-flex; align-items: center; padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+        .badge-live { background-color: #e6f4ea; color: #137333; }
+        .badge-offline { background-color: #f1f3f4; color: #5f6368; }
+        .card-stat { border: none; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .ecg-graphic { width: 180px; height: 180px; background-color: rgba(239, 68, 68, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 30px; }
+        .ecg-graphic svg { width: 110px; height: 110px; fill: #ef4444; }
     </style>
 </head>
 <body>
 
-    <div class="main-container">
-        
-        <!-- LEFT PANE: Login Form -->
-        <div class="left-pane">
-            <!-- Dynamic Hardware Status Badge -->
-            <div class="top-status-container">
-                <div id="sensor-status-badge" class="sensor-badge badge-offline">
-                    <span>•</span>&nbsp;No signal
-                </div>
-            </div>
-
-            <div class="login-card">
-                <div class="lock-icon-container">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/>
-                    </svg>
+    <!-- ================= 1. LOGIN VIEW ================= -->
+    <div id="login-view" class="view-section active">
+        <div class="login-container">
+            <!-- Left Pane: Form -->
+            <div class="left-pane">
+                <div style="position: absolute; top: 20px; right: 30px;">
+                    <div id="sensor-status-badge" class="sensor-badge badge-offline"><span>•</span>&nbsp;No signal</div>
                 </div>
 
-                <div class="mb-4">
+                <div class="login-card">
                     <h3 class="fw-bold mb-1" style="color: #1f2937;">Welcome to Heart Rate Portal</h3>
-                    <p class="text-muted small">Sign in to access your telemetry dashboard</p>
+                    <p class="text-muted small mb-4">Sign in to access your telemetry dashboard</p>
+
+                    <form id="login-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-secondary">Username</label>
+                            <input type="text" class="form-control py-2" id="username" placeholder="Enter username" required autocomplete="off">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small text-secondary">Password</label>
+                            <input type="password" class="form-control py-2" id="password" placeholder="Enter password" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold small text-secondary">Select Role</label>
+                            <select class="form-select py-2" id="role">
+                                <option value="patient">Patient</option>
+                                <option value="doctor">Doctor</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm" style="background-color: #2563eb; border: none;">Sign In</button>
+                    </form>
                 </div>
+            </div>
 
-                <form action="/api/login" method="POST">
-                    <div class="mb-3">
-                        <label for="username" class="form-label fw-semibold small text-secondary">Username</label>
-                        <input type="text" class="form-control py-2" id="username" name="username" placeholder="Enter username" required autocomplete="off">
-                    </div>
+            <!-- Right Pane: Branding -->
+            <div class="right-pane">
+                <div class="ecg-graphic">
+                    <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                </div>
+                <h2 style="font-size: 1.5rem; font-weight: 600;">Real-Time Doctor & Patient Telemetry Portal</h2>
+            </div>
+        </div>
+    </div>
 
-                    <div class="mb-3">
-                        <label for="password" class="form-label fw-semibold small text-secondary">Password</label>
-                        <input type="password" class="form-control py-2" id="password" name="password" placeholder="Enter password" required>
-                    </div>
 
-                    <div class="mb-4">
-                        <label for="role" class="form-label fw-semibold small text-secondary">Select Role</label>
-                        <select class="form-select py-2" id="role" name="role">
-                            <option value="patient">Patient</option>
-                            <option value="doctor">Doctor</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm" style="background-color: #2563eb; border: none;">Sign In</button>
-                </form>
+    <!-- ================= 2. DASHBOARD VIEW ================= -->
+    <div id="dashboard-view" class="view-section">
+        <!-- Sidebar -->
+        <div class="sidebar d-flex flex-column justify-content-between">
+            <div>
+                <h4 class="text-danger fw-bold mb-4">❤️ PulseSync</h4>
+                <div id="logged-user-name" class="fw-bold text-dark fs-5 mb-1">User</div>
+                <p id="logged-user-role" class="text-muted small text-uppercase">Patient</p>
+            </div>
+            <div>
+                <button onclick="logout()" class="btn btn-outline-danger w-100 py-2">Sign Out</button>
             </div>
         </div>
 
-        <!-- RIGHT PANE: Branding / Heart Graphic Banner -->
-        <div class="right-pane">
-            <div class="ecg-graphic">
-                <!-- Heart & ECG Wave SVG Graphic -->
-                <svg viewBox="0 0 24 24">
-                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
-                </svg>
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2>Telemetry Dashboard</h2>
+                    <p class="text-muted small mb-0">Live hardware synchronization feed</p>
+                </div>
+                <div id="dash-sensor-badge" class="sensor-badge badge-offline"><span>•</span>&nbsp;No signal</div>
             </div>
-            <h2 class="right-title">Real-Time Doctor & Patient Telemetry Portal</h2>
-        </div>
 
+            <!-- Telemetry Stats Cards -->
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card card-stat p-4 bg-white">
+                        <span class="text-muted small fw-semibold">HEART RATE</span>
+                        <h2 id="dash-bpm" class="display-5 fw-bold text-danger my-2">-- BPM</h2>
+                        <span class="text-muted small">Normal range 60-100 BPM</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card card-stat p-4 bg-white">
+                        <span class="text-muted small fw-semibold">STATUS</span>
+                        <h4 id="dash-status" class="fw-bold text-secondary my-2">No data</h4>
+                        <span class="text-muted small">Automatic threshold check</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card card-stat p-4 bg-white">
+                        <span class="text-muted small fw-semibold">LAST READING</span>
+                        <h6 id="dash-time" class="fw-bold text-dark my-2">None yet</h6>
+                        <span class="text-muted small">NTP Clock Synchronized</span>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        // Dynamic Sensor Badge Updater
-        function checkSensorFeed(lastUpdatedTime) {
-            const badge = document.getElementById('sensor-status-badge');
-            if (!lastUpdatedTime) {
-                badge.className = "sensor-badge badge-offline";
-                badge.innerHTML = "<span>•</span>&nbsp;No signal";
-                return;
-            }
+        // Handle Client-Side Login & View Switching
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('username').value;
+            const role = document.getElementById('role').value;
 
-            const now = new Date();
-            const lastActive = new Date(lastUpdatedTime);
-            const diffSeconds = Math.floor((now - lastActive) / 1000);
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, role })
+            });
 
-            if (diffSeconds > 10) {
-                badge.className = "sensor-badge badge-offline";
-                badge.innerHTML = `<span>•</span>&nbsp;No signal (Last updated ${diffSeconds}s ago)`;
-            } else {
-                badge.className = "sensor-badge badge-live";
-                badge.innerHTML = "<span>•</span>&nbsp;Live Sensor Feed";
+            if (res.ok) {
+                document.getElementById('logged-user-name').innerText = username;
+                document.getElementById('logged-user-role').innerText = role;
+                
+                // Switch views without reloading
+                document.getElementById('login-view').classList.remove('active');
+                document.getElementById('dashboard-view').classList.add('active');
             }
+        });
+
+        function logout() {
+            document.getElementById('dashboard-view').classList.remove('active');
+            document.getElementById('login-view').classList.add('active');
         }
 
-        // Poll backend hardware status every 3 seconds
-        async function fetchSensorStatus() {
+        // Live Hardware & Badge Polling
+        async function pollTelemetry() {
             try {
-                const response = await fetch('/api/arduino/status');
-                const data = await response.json();
-                checkSensorFeed(data.last_updated);
+                const res = await fetch('/api/arduino/status');
+                const data = await res.json();
+
+                if (data.last_bpm) {
+                    document.getElementById('dash-bpm').innerText = `${data.last_bpm} BPM`;
+                    let status = data.last_bpm > 100 ? "High" : data.last_bpm < 60 ? "Low" : "Normal";
+                    document.getElementById('dash-status').innerText = status;
+                }
+                if (data.last_updated) {
+                    document.getElementById('dash-time').innerText = new Date(data.last_updated).toLocaleTimeString();
+                    
+                    const diffSec = Math.floor((new Date() - new Date(data.last_updated)) / 1000);
+                    const badgeElements = [document.getElementById('sensor-status-badge'), document.getElementById('dash-sensor-badge')];
+                    
+                    badgeElements.forEach(badge => {
+                        if (diffSec > 10) {
+                            badge.className = "sensor-badge badge-offline";
+                            badge.innerHTML = "<span>•</span>&nbsp;No signal";
+                        } else {
+                            badge.className = "sensor-badge badge-live";
+                            badge.innerHTML = "<span>•</span>&nbsp;Live Sensor Feed";
+                        }
+                    });
+                }
             } catch (err) {
-                console.error("Error checking hardware status", err);
+                console.error("Polling error", err);
             }
         }
 
-        fetchSensorStatus();
-        setInterval(fetchSensorStatus, 3000);
+        setInterval(pollTelemetry, 2000);
     </script>
 </body>
 </html>
