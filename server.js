@@ -30,8 +30,7 @@ let patientsData = {
     3: { id: 3, name: 'Engetelo', bpm: 0, status: 'No data', last_reading: 'None yet', trend: [] }
 };
 
-// Active session state for Arduino LCD sync
-let activeSession = { patient_id: 0, name: 'Waiting...' };
+let activeSession = { patient_id: 0, name: 'Waiting' };
 
 // 1. Strict Role Authorization Endpoint
 app.post('/api/login', (req, res) => {
@@ -56,7 +55,6 @@ app.post('/api/login', (req, res) => {
         if (cleanUser.toLowerCase().includes('nhlelo')) pId = 2;
         else if (cleanUser.toLowerCase().includes('engetelo')) pId = 3;
         else {
-            // Register or map custom patient name dynamically
             patientsData[pId] = { id: pId, name: cleanUser, bpm: 0, status: 'No data', last_reading: 'None yet', trend: [] };
         }
 
@@ -66,9 +64,8 @@ app.post('/api/login', (req, res) => {
     res.status(400).json({ error: 'Invalid role selection.' });
 });
 
-// Logout endpoint to reset Arduino LCD to "Waiting for patient..."
 app.post('/api/logout', (req, res) => {
-    activeSession = { patient_id: 0, name: 'Waiting...' };
+    activeSession = { patient_id: 0, name: 'Waiting' };
     res.json({ success: true });
 });
 
@@ -76,7 +73,7 @@ app.get('/api/arduino/status', (req, res) => {
     res.json(activeSession);
 });
 
-// 2. Doctor Patient Directory (Cleaned without hardware control buttons)
+// 2. Doctor Patient Directory & Live Count
 app.get('/api/doctor/patients', (req, res) => {
     let resultList = Object.values(patientsData).map(p => ({
         id: p.id,
@@ -86,6 +83,12 @@ app.get('/api/doctor/patients', (req, res) => {
         signal: p.last_reading
     }));
     res.json(resultList);
+});
+
+// Calculate live active transmitting patients count for doctor dashboard card
+app.get('/api/doctor/stats', (req, res) => {
+    let liveCount = Object.values(patientsData).filter(p => p.bpm > 0).length;
+    res.json({ live_count: liveCount, total: 3 });
 });
 
 // 3. Individual Patient History & Reports
