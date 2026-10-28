@@ -1,150 +1,82 @@
-require('dotenv').config();
-
 const express = require('express');
-const mysql = require('mysql2');
 const bodyParser = require('body-parser');
-const path = require('path');
-
 const app = express();
+
+app.set('view engine', 'ejs');
 app.use(bodyParser.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(express.static('public')); // For CSS/JS assets if you have them
 
-const db = mysql.createConnection({
-    host: process.env.DB_HOST || 'mysql-3b509606-snothitshovelo-4576.d.aivencloud.com',
-    user: process.env.DB_USER || 'avnadmin',
-    password: process.env.DB_PASSWORD || 'AVNS_fERnQPwQjYM456TA7jc',
-    database: process.env.DB_NAME || 'defaultdb',
-    port: process.env.DB_PORT ? parseInt(process.env.DB_PORT) : 17525,
-    ssl: { rejectUnauthorized: false }
-});
-
-db.connect(err => {
-    if (err) console.error('Database connection error:', err);
-    else console.log('Connected successfully to Aiven Cloud MySQL Database.');
-});
-
-// Patient storage mapping
-let patientsData = {
-    1: { id: 1, name: 'Tshovelo Mashimbyi', bpm: 0, status: 'No data', last_reading: 'None yet', trend: [] },
-    2: { id: 2, name: 'Nhlelo', bpm: 0, status: 'No data', last_reading: 'None yet', trend: [] },
-    3: { id: 3, name: 'Engetelo', bpm: 0, status: 'No data', last_reading: 'None yet', trend: [] }
+// Active session state synchronized with your ESP8266 hardware
+let activeSession = {
+    patient_id: 0,
+    name: "Waiting",
+    last_bpm: 0,
+    last_signal: 0,
+    last_updated: null
 };
 
-let activeSession = { patient_id: 0, name: 'Waiting' };
+// Device security key verification middleware
+const DEVICE_KEY = "f5e2c78101a84a75ffbac169ca8a6ebd";
 
-// 1. Strict Role Authorization Endpoint
-app.post('/api/login', (req, res) => {
-    const { username, password, role } = req.body;
-    const cleanUser = username ? username.trim() : '';
-
-    if (role === 'doctor') {
-        if (cleanUser.toLowerCase() === 'dr maswanganye') {
-            activeSession = { patient_id: 0, name: 'Dr Maswanganye' };
-            return res.json({ success: true, username: 'Dr Maswanganye', role: 'doctor' });
-        }
-        return res.status(401).json({ error: 'Unauthorized: Only Dr Maswanganye is authorized as Doctor.' });
-    } else if (role === 'patient') {
-        if (cleanUser.toLowerCase().includes('dr') || cleanUser.toLowerCase() === 'dr maswanganye') {
-            return res.status(403).json({ error: 'Access Denied: Doctors cannot log into patient dashboards.' });
-        }
-        if (!cleanUser) {
-            return res.status(400).json({ error: 'Patient name is required.' });
-        }
-
-        let pId = 1;
-        if (cleanUser.toLowerCase().includes('nhlelo')) pId = 2;
-        else if (cleanUser.toLowerCase().includes('engetelo')) pId = 3;
-        else {
-            patientsData[pId] = { id: pId, name: cleanUser, bpm: 0, status: 'No data', last_reading: 'None yet', trend: [] };
-        }
-
-        activeSession = { patient_id: pId, name: cleanUser };
-        return res.json({ success: true, username: cleanUser, role: 'patient', patient_id: pId });
+function verifyDeviceKey(req, res, next) {
+    const key = req.headers['x-device-key'];
+    if (key !== DEVICE_KEY) {
+        return res.status(401).json({ error: "Unauthorized device key" });
     }
-    res.status(400).json({ error: 'Invalid role selection.' });
-});
+    next();
+}
 
-app.post('/api/logout', (req, res) => {
-    activeSession = { patient_id: 0, name: 'Waiting' };
-    res.json({ success: true });
-});
-
+// 1. API: Arduino checks active session status
 app.get('/api/arduino/status', (req, res) => {
     res.json(activeSession);
 });
 
-// 2. Doctor Patient Directory & Live Count
-app.get('/api/doctor/patients', (req, res) => {
-    let resultList = Object.values(patientsData).map(p => ({
-        id: p.id,
-        name: p.name,
-        latest: p.bpm > 0 ? `${p.bpm} BPM` : '--',
-        status: p.status,
-        signal: p.last_reading
-    }));
-    res.json(resultList);
+// 2. API: Arduino posts live telemetry
+app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
+    const { patient_id, name, bpm, raw_signal, timestamp } = req.body;
+    
+    activeSession = {
+        patient_id,
+        name,
+        last_bpm: bpm,
+        last_signal: raw_signal,
+        last_updated: new Date()
+    };
+
+    console.log(`[TELEMETRY] Patient: ${name} (ID: ${patient_id}) | BPM: ${bpm} | Time: ${timestamp}`);
+    res.status(200).json({ success: true, message: "Telemetry recorded successfully" });
 });
 
-// Calculate live active transmitting patients count for doctor dashboard card
-app.get('/api/doctor/stats', (req, res) => {
-    let liveCount = Object.values(patientsData).filter(p => p.bpm > 0).length;
-    res.json({ live_count: liveCount, total: 3 });
+// 3. Login Route
+app.get('/', (req, res) => {
+    res.render('index'); // Renders your login view
 });
 
-// 3. Individual Patient History & Reports
-app.get('/api/doctor/patient/:id/history', (req, res) => {
-    const pId = req.params.id;
-    const p = patientsData[pId] || patientsData[1];
-    res.json({
-        patient_id: p.id,
-        history: p.trend.map((val, idx) => ({
-            date: new Date().toLocaleDateString(),
-            time: `00:${10 + idx}:00`,
-            bpm: val,
-            status: val > 100 ? 'High' : (val < 60 ? 'Low' : 'Normal')
-        })),
-        alerts: p.bpm > 100 ? [{ message: `Tachycardia alert: Heart rate (${p.bpm} BPM) exceeds threshold (100 BPM).`, timestamp: p.last_reading }] : []
-    });
-});
+app.post('/api/login', (req, res) => {
+    const { username, role } = req.body;
+    let patientId = username === "Tshovelo" ? 1 : username === "Nhlelo" ? 2 : username === "Engetelo" ? 3 : 0;
+    
+    activeSession.patient_id = patientId;
+    activeSession.name = username;
+    activeSession.last_updated = new Date();
 
-// 4. MAX30102 Telemetry Receiver from Arduino
-app.post('/api/telemetry', (req, res) => {
-    const deviceKey = req.headers['x-device-key'];
-    if (deviceKey !== process.env.DEVICE_KEY && deviceKey !== 'f5e2c78101a84a75ffbac169ca8a6ebd') {
-        return res.status(403).json({ error: 'Invalid device key' });
+    if (role === 'doctor') {
+        res.redirect('/doctor-dashboard');
+    } else {
+        res.redirect('/patient-dashboard');
     }
-    const { patient_id, bpm, raw_signal } = req.body;
-    const targetId = patient_id || activeSession.patient_id;
-
-    if (patientsData[targetId] && bpm > 0) {
-        let status = 'Normal';
-        if (bpm > 100) status = 'High';
-        else if (bpm < 60) status = 'Low';
-
-        patientsData[targetId].bpm = bpm;
-        patientsData[targetId].status = status;
-        patientsData[targetId].last_reading = new Date().toLocaleString();
-        
-        patientsData[targetId].trend.push(bpm);
-        if (patientsData[targetId].trend.length > 15) patientsData[targetId].trend.shift();
-    }
-
-    res.json({ success: true, message: 'Sensor data recorded' });
 });
 
-// 5. Patient Live Feed Endpoint
-app.get('/api/patient/live/:id', (req, res) => {
-    const pId = req.params.id;
-    const p = patientsData[pId] || patientsData[3];
-    res.json({
-        patient_id: p.id,
-        name: p.name,
-        bpm: p.bpm > 0 ? p.bpm : '--',
-        status: p.status,
-        last_reading: p.last_reading,
-        trend: p.trend
-    });
+app.get('/patient-dashboard', (req, res) => {
+    res.render('patient-dashboard', { activeUser: activeSession });
+});
+
+app.get('/doctor-dashboard', (req, res) => {
+    res.render('doctor-dashboard', { activeSession });
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
