@@ -7,9 +7,10 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Initialized empty/null so the hardware waits for an explicit web app login session
 let activeSession = {
-    patient_id: 1,
-    name: "Tshovelo",
+    patient_id: null,
+    name: "",
     last_bpm: 0,
     last_signal: 0,
     last_updated: null
@@ -21,7 +22,7 @@ let patientsDatabase = {
     "Engetelo": { id: 3, name: "Engetelo", bpm: "--", status: "No data", lastSignal: "None yet", history: [] }
 };
 
-// Exact requested case-sensitive passwords (Dr Maswanganye instead of doctor)
+// Exact requested case-sensitive passwords
 const userPasswords = {
     "Dr Maswanganye": "Mukah@12",
     "Tshovelo": "Tshovelo@2003",
@@ -68,7 +69,7 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
     
     let targetName = name || activeSession.name;
     if (!patientsDatabase[targetName]) {
-        targetName = "Tshovelo";
+        return res.status(400).json({ error: "Invalid patient target" });
     }
 
     let status = "Normal";
@@ -82,7 +83,7 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
     const currentTime = timestamp || new Date().toLocaleTimeString();
 
     activeSession = {
-        patient_id: patient_id || 1,
+        patient_id: patient_id || patientsDatabase[targetName].id,
         name: targetName,
         last_bpm: bpm,
         last_signal: raw_signal,
@@ -117,7 +118,7 @@ app.post('/api/login', (req, res) => {
         return res.status(200).json({ success: true, role: 'doctor', username: 'Dr Maswanganye' });
     } else if (patientsDatabase[identity]) {
         if (password !== userPasswords[identity]) {
-            return res.status(401).json({ error: "Invalid password or case mismatch." });
+            return res.status(401).json({ error: "Invalid password" });
         }
         activeSession.name = identity;
         activeSession.patient_id = patientsDatabase[identity].id;
