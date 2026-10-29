@@ -5,17 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PulseSync - Telemetry Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; }
         .view-section { display: none; height: 100vh; width: 100vw; }
         .view-section.active { display: flex; }
 
+        /* Login Split Screen */
         .login-container { display: flex; width: 100vw; height: 100vh; }
         .left-pane { flex: 1; background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; }
         .right-pane { flex: 1; background: #111827; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 40px; }
         .login-card { width: 100%; max-width: 420px; }
         
+        /* Dashboard Layouts */
         .sidebar { width: 260px; height: 100vh; position: fixed; background: #ffffff; border-right: 1px solid #dee2e6; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
         .main-content { margin-left: 260px; padding: 30px; width: calc(100% - 260px); height: 100vh; overflow-y: auto; }
 
@@ -28,7 +31,7 @@
 </head>
 <body>
 
-    <!-- LOGIN VIEW -->
+    <!-- ================= 1. LOGIN VIEW ================= -->
     <div id="login-view" class="view-section active">
         <div class="login-container">
             <div class="left-pane">
@@ -66,7 +69,7 @@
         </div>
     </div>
 
-    <!-- PATIENT DASHBOARD VIEW -->
+    <!-- ================= 2. PATIENT DASHBOARD VIEW ================= -->
     <div id="patient-dashboard-view" class="view-section">
         <div class="sidebar">
             <div>
@@ -124,6 +127,14 @@
                 <p id="alert-banner-text" class="mb-0 text-secondary small">Place your finger on the sensor. Live readings and health interpretation will appear here instantly.</p>
             </div>
 
+            <!-- LIVE PULSE TRENDLINE GRAPH -->
+            <div class="card card-stat p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3">Pulse Trendline (Live Heart Rate Graph)</h5>
+                <div style="height: 250px;">
+                    <canvas id="patientPulseChart"></canvas>
+                </div>
+            </div>
+
             <div class="card card-stat p-4 bg-white">
                 <h5 class="fw-bold mb-3">Trend Overview & Historical Logs</h5>
                 <div class="table-responsive">
@@ -145,7 +156,7 @@
         </div>
     </div>
 
-    <!-- DOCTOR MONITORING PORTAL VIEW -->
+    <!-- ================= 3. DOCTOR MONITORING PORTAL VIEW ================= -->
     <div id="doctor-dashboard-view" class="view-section">
         <div class="sidebar">
             <div>
@@ -194,7 +205,7 @@
             </div>
 
             <div class="card card-stat p-4 bg-white mb-4">
-                <h5 class="fw-bold mb-3">Patient Directory (Click a patient to inspect history and threshold breaches)</h5>
+                <h5 class="fw-bold mb-3">Patient Directory (Click a patient to inspect clinical records)</h5>
                 <div class="table-responsive">
                     <table class="table align-middle table-hover" style="cursor: pointer;">
                         <thead>
@@ -212,10 +223,90 @@
         </div>
     </div>
 
+    <!-- DOCTOR INSPECTION MODAL (Keeps Doctor in Doctor Portal) -->
+    <div class="modal fade" id="doctorInspectModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-light">
+                    <h5 class="modal-title fw-bold" id="inspectModalTitle">Clinical Telemetry Record</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded text-center">
+                                <span class="text-muted small fw-semibold d-block">LATEST BPM</span>
+                                <h3 id="inspectModalBpm" class="fw-bold text-danger my-1">-- BPM</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded text-center">
+                                <span class="text-muted small fw-semibold d-block">STATUS</span>
+                                <h4 id="inspectModalStatus" class="fw-bold text-secondary my-1">--</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-3 bg-light rounded text-center">
+                                <span class="text-muted small fw-semibold d-block">TIMESTAMP</span>
+                                <span id="inspectModalTime" class="fw-bold text-dark d-block my-2" style="font-size:0.85rem;">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold mb-3">Historical Logs & Threshold Alerts</h6>
+                    <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Date, Year</th>
+                                    <th>Time</th>
+                                    <th>BPM</th>
+                                    <th>Status / Alert</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inspectModalHistory"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close Record</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         let currentUser = null;
         let currentRole = null;
         let selectedPatientView = null;
+        let pulseChartInstance = null;
+
+        function initPulseChart() {
+            const ctx = document.getElementById('patientPulseChart').getContext('2d');
+            pulseChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Live Pulse (BPM)',
+                        data: [],
+                        borderColor: '#dc3545',
+                        backgroundColor: 'rgba(220, 53, 69, 0.1)',
+                        borderWidth: 2,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { min: 40, max: 180 }
+                    }
+                }
+            });
+        }
 
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -244,6 +335,7 @@
                     selectedPatientView = currentUser;
                     loadPatientDashboard(currentUser);
                     document.getElementById('patient-dashboard-view').classList.add('active');
+                    if (!pulseChartInstance) initPulseChart();
                 }
             } else {
                 errorDiv.innerText = data.error || "Authorization failed";
@@ -265,17 +357,11 @@
 
                 patients.forEach(p => {
                     if (p.isLive) liveCount++;
-                    if (p.status === "High" || p.status === "Low") {
-                        alertCount++;
-                    }
+                    if (p.status === "High" || p.status === "Low") alertCount++;
 
                     const tr = document.createElement('tr');
-                    tr.onclick = () => {
-                        selectedPatientView = p.name;
-                        document.getElementById('doctor-dashboard-view').classList.remove('active');
-                        loadPatientDashboard(p.name);
-                        document.getElementById('patient-dashboard-view').classList.add('active');
-                    };
+                    // Doctor stays on Doctor Portal and opens Modal on click
+                    tr.onclick = () => inspectPatientAsDoctor(p.name);
 
                     let badgeClass = "bg-secondary";
                     if (p.status === "High") badgeClass = "bg-danger";
@@ -295,6 +381,41 @@
                 document.getElementById('doc-alerts-count').innerText = alertCount;
             } catch (err) {
                 console.error("Error loading doctor directory", err);
+            }
+        }
+
+        async function inspectPatientAsDoctor(patientName) {
+            try {
+                const res = await fetch(`/api/patients/record?name=${encodeURIComponent(patientName)}`);
+                const data = await res.json();
+
+                document.getElementById('inspectModalTitle').innerText = `Clinical Telemetry Record: ${patientName}`;
+                document.getElementById('inspectModalBpm').innerText = data.bpm;
+                document.getElementById('inspectModalStatus').innerText = data.status;
+                document.getElementById('inspectModalTime').innerText = data.lastSignal;
+
+                const historyTable = document.getElementById('inspectModalHistory');
+                historyTable.innerHTML = '';
+
+                if (data.history && data.history.length > 0) {
+                    data.history.forEach(h => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${h.date}</td>
+                            <td>${h.time}</td>
+                            <td class="fw-bold">${h.bpm}</td>
+                            <td><span class="badge ${h.status === 'High' ? 'bg-danger' : h.status === 'Low' ? 'bg-warning text-dark' : 'bg-success'}">${h.status}</span></td>
+                        `;
+                        historyTable.appendChild(row);
+                    });
+                } else {
+                    historyTable.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-2">No logs recorded.</td></tr>`;
+                }
+
+                const modal = new bootstrap.Modal(document.getElementById('doctorInspectModal'));
+                modal.show();
+            } catch (err) {
+                console.error("Error inspecting patient record", err);
             }
         }
 
@@ -327,6 +448,20 @@
                     alertBanner.innerHTML = `<strong>Bradycardia alert:</strong> Your heart rate (${data.bpm}) falls below threshold (60 BPM).`;
                 } else {
                     alertBanner.innerHTML = "No active threshold breaches. Your heart rate is within normal range.";
+                }
+
+                // Update Pulse Trendline Graph dynamically
+                if (pulseChartInstance && data.bpm !== "--") {
+                    const cleanBpm = parseInt(data.bpm);
+                    const nowStr = new Date().toLocaleTimeString();
+
+                    if (pulseChartInstance.data.labels.length > 12) {
+                        pulseChartInstance.data.labels.shift();
+                        pulseChartInstance.data.datasets[0].data.shift();
+                    }
+                    pulseChartInstance.data.labels.push(nowStr);
+                    pulseChartInstance.data.datasets[0].data.push(cleanBpm);
+                    pulseChartInstance.update();
                 }
 
                 const historyTable = document.getElementById('patient-history-table');
