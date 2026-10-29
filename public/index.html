@@ -3,22 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PulseSync - Secure Telemetry Portal</title>
+    <title>PulseSync - Telemetry Portal</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; }
-        
         .view-section { display: none; height: 100vh; width: 100vw; }
         .view-section.active { display: flex; }
 
-        /* Login Split Screen */
         .login-container { display: flex; width: 100vw; height: 100vh; }
         .left-pane { flex: 1; background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; }
         .right-pane { flex: 1; background: #111827; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 40px; }
         .login-card { width: 100%; max-width: 420px; }
         
-        /* Dashboard Layouts */
         .sidebar { width: 260px; height: 100vh; position: fixed; background: #ffffff; border-right: 1px solid #dee2e6; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
         .main-content { margin-left: 260px; padding: 30px; width: calc(100% - 260px); height: 100vh; overflow-y: auto; }
 
@@ -31,49 +28,45 @@
 </head>
 <body>
 
-    <!-- ================= 1. LOGIN VIEW ================= -->
+    <!-- LOGIN VIEW -->
     <div id="login-view" class="view-section active">
         <div class="login-container">
             <div class="left-pane">
                 <div class="login-card">
                     <h3 class="fw-bold mb-1" style="color: #1f2937;">Welcome to Heart Rate Portal</h3>
-                    <p class="text-muted small mb-4">Secure authorization & role-based sign-in</p>
+                    <p class="text-muted small mb-4">Sign in to access your telemetry dashboard</p>
 
                     <div id="login-error" class="alert alert-danger py-2 small d-none"></div>
 
                     <form id="login-form">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small text-secondary">Select Identity / Role</label>
+                            <label class="form-label fw-semibold small text-secondary">Username / Role</label>
                             <select class="form-select py-2" id="auth-identity" required>
-                                <option value="" disabled selected>-- Choose Authorization Profile --</option>
+                                <option value="" disabled selected>-- Select Profile --</option>
                                 <option value="doctor">Dr Maswanganye (Doctor Portal)</option>
-                                <option value="Tshovelo Mashimbyi">Tshovelo Mashimbyi (Patient)</option>
+                                <option value="Tshovelo">Tshovelo (Patient)</option>
                                 <option value="Nhlelo">Nhlelo (Patient)</option>
                                 <option value="Engetelo">Engetelo (Patient)</option>
                             </select>
                         </div>
-
                         <div class="mb-3">
-                            <label class="form-label fw-semibold small text-secondary">Secure Password</label>
+                            <label class="form-label fw-semibold small text-secondary">Password</label>
                             <input type="password" class="form-control py-2" id="password" placeholder="Enter password" required>
                         </div>
-
-                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm" style="background-color: #2563eb; border: none;">Authorize & Sign In</button>
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold shadow-sm">Sign In</button>
                     </form>
                 </div>
             </div>
-
             <div class="right-pane">
                 <div class="ecg-graphic">
                     <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                 </div>
-                <h2 style="font-size: 1.5rem; font-weight: 600;">Real-Time Doctor & Patient Telemetry Portal</h2>
+                <h2>Real-Time Doctor & Patient Telemetry Portal</h2>
             </div>
         </div>
     </div>
 
-
-    <!-- ================= 2. PATIENT DASHBOARD VIEW ================= -->
+    <!-- PATIENT DASHBOARD VIEW -->
     <div id="patient-dashboard-view" class="view-section">
         <div class="sidebar">
             <div>
@@ -84,9 +77,9 @@
             </div>
             <div>
                 <div class="d-flex align-items-center mb-3">
-                    <div class="bg-dark text-white rounded-circle p-2 fw-bold text-center me-2" style="width:38px;height:38px;" id="patient-avatar-initials">TM</div>
+                    <div class="bg-dark text-white rounded-circle p-2 fw-bold text-center me-2" style="width:38px;height:38px;" id="patient-avatar-initials">T</div>
                     <div>
-                        <div id="patient-logged-name" class="fw-bold text-dark small">Tshovelo Mashimbyi</div>
+                        <div id="patient-logged-name" class="fw-bold text-dark small">Tshovelo</div>
                         <p class="text-muted text-uppercase mb-0" style="font-size: 0.7rem;">Patient</p>
                     </div>
                 </div>
@@ -103,7 +96,7 @@
                 <div id="sensor-status-badge" class="sensor-badge">No signal</div>
             </div>
 
-            <h3 id="dashboard-patient-title" class="fw-bold mb-3">Tshovelo Mashimbyi</h3>
+            <h3 id="dashboard-patient-title" class="fw-bold mb-3">Tshovelo</h3>
 
             <div class="row g-4 mb-4">
                 <div class="col-md-4">
@@ -140,7 +133,7 @@
                                 <th>Date, Year</th>
                                 <th>Time</th>
                                 <th>BPM</th>
-                                <th>Status / Alerts</th>
+                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody id="patient-history-table">
@@ -152,8 +145,7 @@
         </div>
     </div>
 
-
-    <!-- ================= 3. DOCTOR MONITORING PORTAL VIEW ================= -->
+    <!-- DOCTOR MONITORING PORTAL VIEW -->
     <div id="doctor-dashboard-view" class="view-section">
         <div class="sidebar">
             <div>
@@ -180,8 +172,29 @@
                 <p class="text-muted small mb-0">Real-time biomedical telemetry monitoring system</p>
             </div>
 
+            <div class="row g-4 mb-4">
+                <div class="col-md-4">
+                    <div class="card card-stat p-4 bg-white">
+                        <span class="text-muted small fw-semibold">ASSIGNED PATIENTS</span>
+                        <h2 id="doc-assigned-count" class="display-5 fw-bold text-dark my-2">3</h2>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card card-stat p-4 bg-white">
+                        <span class="text-muted small fw-semibold">SENDING LIVE DATA</span>
+                        <h2 id="doc-live-count" class="display-5 fw-bold text-success my-2">0</h2>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card card-stat p-4 bg-white">
+                        <span class="text-muted small fw-semibold">OPEN ALERTS</span>
+                        <h2 id="doc-alerts-count" class="display-5 fw-bold text-danger my-2">0</h2>
+                    </div>
+                </div>
+            </div>
+
             <div class="card card-stat p-4 bg-white mb-4">
-                <h5 class="fw-bold mb-3">Patient Directory (Click a patient to inspect history and threshold alerts)</h5>
+                <h5 class="fw-bold mb-3">Patient Directory (Click a patient to inspect history and threshold breaches)</h5>
                 <div class="table-responsive">
                     <table class="table align-middle table-hover" style="cursor: pointer;">
                         <thead>
@@ -192,9 +205,7 @@
                                 <th>Last Signal</th>
                             </tr>
                         </thead>
-                        <tbody id="doctor-directory-body">
-                            <!-- Populated dynamically -->
-                        </tbody>
+                        <tbody id="doctor-directory-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -240,9 +251,7 @@
             }
         });
 
-        function logout() {
-            window.location.reload();
-        }
+        function logout() { window.location.reload(); }
 
         async function loadDoctorDirectory() {
             try {
@@ -251,7 +260,13 @@
                 const tbody = document.getElementById('doctor-directory-body');
                 tbody.innerHTML = '';
 
+                let liveCount = 0;
+                let alertCount = 0;
+
                 patients.forEach(p => {
+                    if (p.isLive) liveCount++;
+                    if (p.status === "High" || p.status === "Low") alertCount++;
+
                     const tr = document.createElement('tr');
                     tr.onclick = () => {
                         selectedPatientView = p.name;
@@ -273,6 +288,9 @@
                     `;
                     tbody.appendChild(tr);
                 });
+
+                document.getElementById('doc-live-count').innerText = liveCount;
+                document.getElementById('doc-alerts-count').innerText = alertCount;
             } catch (err) {
                 console.error("Error loading doctor directory", err);
             }
@@ -281,7 +299,7 @@
         async function loadPatientDashboard(patientName) {
             document.getElementById('dashboard-patient-title').innerText = patientName;
             document.getElementById('patient-logged-name').innerText = patientName;
-            document.getElementById('patient-avatar-initials').innerText = patientName.split(' ').map(n=>n[0]).join('').substring(0,2).toUpperCase();
+            document.getElementById('patient-avatar-initials').innerText = patientName.substring(0,1).toUpperCase();
 
             try {
                 const res = await fetch(`/api/patients/record?name=${encodeURIComponent(patientName)}`);
@@ -302,11 +320,11 @@
 
                 const alertBanner = document.getElementById('alert-banner-text');
                 if (data.status === "High") {
-                    alertBanner.innerHTML = `<strong>Tachycardia alert:</strong> Heart rate (${data.bpm}) exceeds threshold (100 BPM).`;
+                    alertBanner.innerHTML = `<strong>Tachycardia alert:</strong> Your heart rate (${data.bpm}) exceeds threshold (100 BPM).`;
                 } else if (data.status === "Low") {
-                    alertBanner.innerHTML = `<strong>Bradycardia alert:</strong> Heart rate (${data.bpm}) falls below threshold (60 BPM).`;
+                    alertBanner.innerHTML = `<strong>Bradycardia alert:</strong> Your heart rate (${data.bpm}) falls below threshold (60 BPM).`;
                 } else {
-                    alertBanner.innerHTML = "No active threshold breaches for this patient.";
+                    alertBanner.innerHTML = "No active threshold breaches. Your heart rate is within normal range.";
                 }
 
                 const historyTable = document.getElementById('patient-history-table');
@@ -330,14 +348,13 @@
             }
         }
 
-        // Periodic background poll
         setInterval(() => {
             if (currentRole === 'doctor' && document.getElementById('doctor-dashboard-view').classList.contains('active')) {
                 loadDoctorDirectory();
             } else if (currentRole === 'patient' && selectedPatientView && document.getElementById('patient-dashboard-view').classList.contains('active')) {
                 loadPatientDashboard(selectedPatientView);
             }
-        }, 3000);
+        }, 2000);
     </script>
 </body>
 </html>
