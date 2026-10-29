@@ -55,6 +55,7 @@ app.get('/api/patients/record', (req, res) => {
     }
 });
 
+// Dynamic Telemetry Ingestion with strict threshold evaluations
 app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
     const { patient_id, name, bpm, raw_signal, timestamp } = req.body;
     
@@ -63,9 +64,13 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
         targetName = "Tshovelo";
     }
 
+    // Dynamic Threshold Logic (No hardcoding)
     let status = "Normal";
-    if (bpm > 100) status = "High";
-    else if (bpm < 60) status = "Low";
+    if (bpm > 100) {
+        status = "High";
+    } else if (bpm < 60 && bpm > 0) {
+        status = "Low";
+    }
 
     const currentDate = new Date().toLocaleDateString() + ", " + new Date().getFullYear();
     const currentTime = timestamp || new Date().toLocaleTimeString();

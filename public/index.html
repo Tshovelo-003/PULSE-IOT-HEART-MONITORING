@@ -265,7 +265,9 @@
 
                 patients.forEach(p => {
                     if (p.isLive) liveCount++;
-                    if (p.status === "High" || p.status === "Low") alertCount++;
+                    if (p.status === "High" || p.status === "Low") {
+                        alertCount++;
+                    }
 
                     const tr = document.createElement('tr');
                     tr.onclick = () => {
