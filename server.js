@@ -21,6 +21,14 @@ let patientsDatabase = {
     "Engetelo": { id: 3, name: "Engetelo", bpm: "--", status: "No data", lastSignal: "None yet", history: [] }
 };
 
+// Exact requested case-sensitive passwords (Dr Maswanganye instead of doctor)
+const userPasswords = {
+    "Dr Maswanganye": "Mukah@12",
+    "Tshovelo": "Tshovelo@2003",
+    "Nhlelo": "2019",
+    "Engetelo": "2016"
+};
+
 const DEVICE_KEY = "f5e2c78101a84a75ffbac169ca8a6ebd";
 
 function verifyDeviceKey(req, res, next) {
@@ -55,7 +63,6 @@ app.get('/api/patients/record', (req, res) => {
     }
 });
 
-// Dynamic Telemetry Ingestion with strict threshold evaluations
 app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
     const { patient_id, name, bpm, raw_signal, timestamp } = req.body;
     
@@ -64,7 +71,6 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
         targetName = "Tshovelo";
     }
 
-    // Dynamic Threshold Logic (No hardcoding)
     let status = "Normal";
     if (bpm > 100) {
         status = "High";
@@ -104,13 +110,15 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
 app.post('/api/login', (req, res) => {
     const { identity, password } = req.body;
     
-    if (!password || password.length < 4) {
-        return res.status(401).json({ error: "Invalid authorization credentials." });
-    }
-
-    if (identity === 'doctor') {
+    if (identity === 'Dr Maswanganye') {
+        if (password !== userPasswords["Dr Maswanganye"]) {
+            return res.status(401).json({ error: "Invalid password or case mismatch." });
+        }
         return res.status(200).json({ success: true, role: 'doctor', username: 'Dr Maswanganye' });
     } else if (patientsDatabase[identity]) {
+        if (password !== userPasswords[identity]) {
+            return res.status(401).json({ error: "Invalid password or case mismatch." });
+        }
         activeSession.name = identity;
         activeSession.patient_id = patientsDatabase[identity].id;
         return res.status(200).json({ success: true, role: 'patient', username: identity });

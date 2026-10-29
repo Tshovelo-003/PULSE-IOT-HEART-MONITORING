@@ -12,13 +12,11 @@
         .view-section { display: none; height: 100vh; width: 100vw; }
         .view-section.active { display: flex; }
 
-        /* Login Split Screen */
         .login-container { display: flex; width: 100vw; height: 100vh; }
         .left-pane { flex: 1; background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; }
         .right-pane { flex: 1; background: #111827; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 40px; }
         .login-card { width: 100%; max-width: 420px; }
         
-        /* Dashboard Layouts */
         .sidebar { width: 260px; height: 100vh; position: fixed; background: #ffffff; border-right: 1px solid #dee2e6; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
         .main-content { margin-left: 260px; padding: 30px; width: calc(100% - 260px); height: 100vh; overflow-y: auto; }
 
@@ -31,7 +29,7 @@
 </head>
 <body>
 
-    <!-- ================= 1. LOGIN VIEW ================= -->
+    <!-- LOGIN VIEW -->
     <div id="login-view" class="view-section active">
         <div class="login-container">
             <div class="left-pane">
@@ -46,7 +44,7 @@
                             <label class="form-label fw-semibold small text-secondary">Username / Role</label>
                             <select class="form-select py-2" id="auth-identity" required>
                                 <option value="" disabled selected>-- Select Profile --</option>
-                                <option value="doctor">Dr Maswanganye (Doctor Portal)</option>
+                                <option value="Dr Maswanganye">Dr Maswanganye (Doctor Portal)</option>
                                 <option value="Tshovelo">Tshovelo (Patient)</option>
                                 <option value="Nhlelo">Nhlelo (Patient)</option>
                                 <option value="Engetelo">Engetelo (Patient)</option>
@@ -69,7 +67,7 @@
         </div>
     </div>
 
-    <!-- ================= 2. PATIENT DASHBOARD VIEW ================= -->
+    <!-- PATIENT DASHBOARD VIEW -->
     <div id="patient-dashboard-view" class="view-section">
         <div class="sidebar">
             <div>
@@ -127,7 +125,6 @@
                 <p id="alert-banner-text" class="mb-0 text-secondary small">Place your finger on the sensor. Live readings and health interpretation will appear here instantly.</p>
             </div>
 
-            <!-- LIVE PULSE TRENDLINE GRAPH -->
             <div class="card card-stat p-4 bg-white mb-4">
                 <h5 class="fw-bold mb-3">Pulse Trendline (Live Heart Rate Graph)</h5>
                 <div style="height: 250px;">
@@ -156,7 +153,7 @@
         </div>
     </div>
 
-    <!-- ================= 3. DOCTOR MONITORING PORTAL VIEW ================= -->
+    <!-- DOCTOR MONITORING PORTAL VIEW -->
     <div id="doctor-dashboard-view" class="view-section">
         <div class="sidebar">
             <div>
@@ -223,7 +220,7 @@
         </div>
     </div>
 
-    <!-- DOCTOR INSPECTION MODAL (Keeps Doctor in Doctor Portal) -->
+    <!-- DOCTOR INSPECTION MODAL -->
     <div class="modal fade" id="doctorInspectModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -301,9 +298,7 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    scales: {
-                        y: { min: 40, max: 180 }
-                    }
+                    scales: { y: { min: 40, max: 180 } }
                 }
             });
         }
@@ -360,7 +355,6 @@
                     if (p.status === "High" || p.status === "Low") alertCount++;
 
                     const tr = document.createElement('tr');
-                    // Doctor stays on Doctor Portal and opens Modal on click
                     tr.onclick = () => inspectPatientAsDoctor(p.name);
 
                     let badgeClass = "bg-secondary";
@@ -450,7 +444,6 @@
                     alertBanner.innerHTML = "No active threshold breaches. Your heart rate is within normal range.";
                 }
 
-                // Update Pulse Trendline Graph dynamically
                 if (pulseChartInstance && data.bpm !== "--") {
                     const cleanBpm = parseInt(data.bpm);
                     const nowStr = new Date().toLocaleTimeString();
