@@ -7,7 +7,6 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Initialized empty/null so the hardware waits for an explicit web app login session
 let activeSession = {
     patient_id: null,
     name: "",
@@ -22,7 +21,6 @@ let patientsDatabase = {
     "Engetelo": { id: 3, name: "Engetelo", bpm: "--", status: "No data", lastSignal: "None yet", history: [] }
 };
 
-// Exact requested case-sensitive passwords
 const userPasswords = {
     "Dr Maswanganye": "Mukah@12",
     "Tshovelo": "Tshovelo@2003",
@@ -41,6 +39,17 @@ function verifyDeviceKey(req, res, next) {
 
 app.get('/api/arduino/status', (req, res) => {
     res.json(activeSession);
+});
+
+app.post('/api/logout', (req, res) => {
+    activeSession = {
+        patient_id: null,
+        name: "",
+        last_bpm: 0,
+        last_signal: 0,
+        last_updated: null
+    };
+    res.status(200).json({ success: true });
 });
 
 app.get('/api/patients/all', (req, res) => {
@@ -118,7 +127,7 @@ app.post('/api/login', (req, res) => {
         return res.status(200).json({ success: true, role: 'doctor', username: 'Dr Maswanganye' });
     } else if (patientsDatabase[identity]) {
         if (password !== userPasswords[identity]) {
-            return res.status(401).json({ error: "Invalid password" });
+            return res.status(401).json({ error: "Invalid password or case mismatch." });
         }
         activeSession.name = identity;
         activeSession.patient_id = patientsDatabase[identity].id;
