@@ -16,7 +16,7 @@
         .left-pane { flex: 1; background: #fff; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 40px; }
         .right-pane { flex: 1; background: #111827; display: flex; flex-direction: column; justify-content: center; align-items: center; color: white; text-align: center; padding: 40px; }
         .login-card { width: 100%; max-width: 420px; }
-        
+
         .sidebar { width: 260px; height: 100vh; position: fixed; background: #ffffff; border-right: 1px solid #dee2e6; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; }
         .main-content { margin-left: 260px; padding: 30px; width: calc(100% - 260px); height: 100vh; overflow-y: auto; }
 
@@ -94,7 +94,7 @@
                     <h2>Patient Dashboard</h2>
                     <p class="text-muted small mb-0">Real-time biomedical telemetry monitoring system</p>
                 </div>
-                <div id="sensor-status-badge" class="sensor-badge">No signal</div>
+                <div id="sensor-status-badge" class="sensor-badge">No Signal</div>
             </div>
 
             <h3 id="dashboard-patient-title" class="fw-bold mb-3">Tshovelo</h3>
@@ -109,7 +109,7 @@
                 <div class="col-md-4">
                     <div class="card card-stat p-4 bg-white">
                         <span class="text-muted small fw-semibold">STATUS</span>
-                        <h4 id="patient-status" class="fw-bold text-secondary my-2">No data</h4>
+                        <h4 id="patient-status" class="fw-bold text-secondary my-2">No Signal</h4>
                         <span class="text-muted small">Normal range 60-100 BPM</span>
                     </div>
                 </div>
@@ -122,7 +122,7 @@
             </div>
 
             <div class="card card-stat p-3 bg-white mb-4 border-start border-danger border-4">
-                <p id="alert-banner-text" class="mb-0 text-secondary small">Place your finger on the sensor. Live readings and health interpretation will appear here instantly.</p>
+                <p id="alert-banner-text" class="mb-0 text-secondary small">No signal. Place your finger on the sensor and live readings will appear here.</p>
             </div>
 
             <div class="card card-stat p-4 bg-white mb-4">
@@ -278,6 +278,14 @@
         let currentRole = null;
         let selectedPatientView = null;
         let pulseChartInstance = null;
+        let lastPlottedSignal = null;   // stops duplicate chart points
+
+        function statusBadgeClass(status) {
+            if (status === 'High') return 'bg-danger';
+            if (status === 'Low') return 'bg-warning text-dark';
+            if (status === 'Normal') return 'bg-success';
+            return 'bg-secondary';
+        }
 
         function initPulseChart() {
             const ctx = document.getElementById('patientPulseChart').getContext('2d');
@@ -298,11 +306,13 @@
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    animation: false,
                     scales: { y: { min: 40, max: 180 } }
                 }
             });
         }
 
+        // ---------- LOGIN ----------
         document.getElementById('login-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const identity = document.getElementById('auth-identity').value;
@@ -328,9 +338,10 @@
                     loadDoctorDirectory();
                 } else {
                     selectedPatientView = currentUser;
-                    loadPatientDashboard(currentUser);
+                    lastPlottedSignal = null;
                     document.getElementById('patient-dashboard-view').classList.add('active');
                     if (!pulseChartInstance) initPulseChart();
+                    loadPatientDashboard(currentUser);
                 }
             } else {
                 errorDiv.innerText = data.error || "Authorization failed";
@@ -338,8 +349,31 @@
             }
         });
 
-        function logout() { window.location.reload(); }
+        // ---------- LOGOUT: tell the server first, then reload ----------
+        async function logout() {
+            try {
+                await fetch('/api/logout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: currentUser })
+                });
+            } catch (err) {
+                console.error("Logout request failed", err);
+            }
+            currentUser = null;   // stops the pagehide handler from logging out twice
+            currentRole = null;
+            window.location.reload();
+        }
 
+        // Patient closes or refreshes the tab without signing out -> log out on the server too
+        window.addEventListener('pagehide', () => {
+            if (currentRole === 'patient' && currentUser) {
+                const blob = new Blob([JSON.stringify({ username: currentUser })], { type: 'application/json' });
+                navigator.sendBeacon('/api/logout', blob);
+            }
+        });
+
+        // ---------- DOCTOR ----------
         async function loadDoctorDirectory() {
             try {
                 const res = await fetch('/api/patients/all');
@@ -351,21 +385,19 @@
                 let alertCount = 0;
 
                 patients.forEach(p => {
-                    if (p.isLive) liveCount++;
-                    if (p.status === "High" || p.status === "Low") alertCount++;
+                    const live = p.isLive === true;
+                    if (live) liveCount++;
+                    if (live && (p.status === "High" || p.status === "Low")) alertCount++;
+
+                    const shownBpm = live ? p.bpm : "--";
+                    const shownStatus = live ? p.status : "No Signal";
 
                     const tr = document.createElement('tr');
                     tr.onclick = () => inspectPatientAsDoctor(p.name);
-
-                    let badgeClass = "bg-secondary";
-                    if (p.status === "High") badgeClass = "bg-danger";
-                    else if (p.status === "Low") badgeClass = "bg-warning text-dark";
-                    else if (p.status === "Normal") badgeClass = "bg-success";
-
                     tr.innerHTML = `
                         <td class="fw-bold text-primary">${p.name}</td>
-                        <td>${p.bpm}</td>
-                        <td><span class="badge ${badgeClass}">${p.status}</span></td>
+                        <td>${shownBpm}</td>
+                        <td><span class="badge ${statusBadgeClass(shownStatus)}">${shownStatus}</span></td>
                         <td class="text-muted small">${p.lastSignal}</td>
                     `;
                     tbody.appendChild(tr);
@@ -382,10 +414,11 @@
             try {
                 const res = await fetch(`/api/patients/record?name=${encodeURIComponent(patientName)}`);
                 const data = await res.json();
+                const live = data.isLive === true;
 
                 document.getElementById('inspectModalTitle').innerText = `Clinical Telemetry Record: ${patientName}`;
-                document.getElementById('inspectModalBpm').innerText = data.bpm;
-                document.getElementById('inspectModalStatus').innerText = data.status;
+                document.getElementById('inspectModalBpm').innerText = live ? `${data.bpm} BPM` : "-- BPM";
+                document.getElementById('inspectModalStatus').innerText = live ? data.status : "No Signal";
                 document.getElementById('inspectModalTime').innerText = data.lastSignal;
 
                 const historyTable = document.getElementById('inspectModalHistory');
@@ -398,7 +431,7 @@
                             <td>${h.date}</td>
                             <td>${h.time}</td>
                             <td class="fw-bold">${h.bpm}</td>
-                            <td><span class="badge ${h.status === 'High' ? 'bg-danger' : h.status === 'Low' ? 'bg-warning text-dark' : 'bg-success'}">${h.status}</span></td>
+                            <td><span class="badge ${statusBadgeClass(h.status)}">${h.status}</span></td>
                         `;
                         historyTable.appendChild(row);
                     });
@@ -413,46 +446,55 @@
             }
         }
 
+        // ---------- PATIENT ----------
         async function loadPatientDashboard(patientName) {
             document.getElementById('dashboard-patient-title').innerText = patientName;
             document.getElementById('patient-logged-name').innerText = patientName;
-            document.getElementById('patient-avatar-initials').innerText = patientName.substring(0,1).toUpperCase();
+            document.getElementById('patient-avatar-initials').innerText = patientName.substring(0, 1).toUpperCase();
 
             try {
                 const res = await fetch(`/api/patients/record?name=${encodeURIComponent(patientName)}`);
                 const data = await res.json();
+                const live = data.isLive === true;
 
-                document.getElementById('patient-bpm').innerHTML = `${data.bpm} <span class="fs-5 text-muted">BPM</span>`;
-                document.getElementById('patient-status').innerText = data.status;
+                // BPM: number only; the "BPM" label is added once here
+                const bpmText = live ? data.bpm : "--";
+                document.getElementById('patient-bpm').innerHTML = `${bpmText} <span class="fs-5 text-muted">BPM</span>`;
+                document.getElementById('patient-status').innerText = live ? data.status : "No Signal";
                 document.getElementById('patient-time').innerText = data.lastSignal;
 
+                // Badge follows the real sensor state
                 const badge = document.getElementById('sensor-status-badge');
-                if (data.status !== "No data" && data.status !== "No signal") {
+                if (live) {
                     badge.className = "sensor-badge badge-live";
                     badge.innerText = "• Live Sensor Feed";
                 } else {
                     badge.className = "sensor-badge";
-                    badge.innerText = "No signal";
+                    badge.innerText = "No Signal";
                 }
 
                 const alertBanner = document.getElementById('alert-banner-text');
-                if (data.status === "High") {
-                    alertBanner.innerHTML = `<strong>Tachycardia alert:</strong> Your heart rate (${data.bpm}) exceeds threshold (100 BPM).`;
+                if (!live) {
+                    alertBanner.innerHTML = "No signal. Place your finger on the sensor and live readings will appear here.";
+                } else if (data.status === "High") {
+                    alertBanner.innerHTML = `<strong>Tachycardia alert:</strong> Your heart rate (${data.bpm} BPM) exceeds threshold (100 BPM).`;
                 } else if (data.status === "Low") {
-                    alertBanner.innerHTML = `<strong>Bradycardia alert:</strong> Your heart rate (${data.bpm}) falls below threshold (60 BPM).`;
+                    alertBanner.innerHTML = `<strong>Bradycardia alert:</strong> Your heart rate (${data.bpm} BPM) falls below threshold (60 BPM).`;
                 } else {
                     alertBanner.innerHTML = "No active threshold breaches. Your heart rate is within normal range.";
                 }
 
-                if (pulseChartInstance && data.bpm !== "--") {
+                // Chart: add a point ONLY when live AND a new reading arrived
+                if (pulseChartInstance && live && data.lastSignal !== lastPlottedSignal) {
+                    lastPlottedSignal = data.lastSignal;
                     const cleanBpm = parseInt(data.bpm);
-                    const nowStr = new Date().toLocaleTimeString();
+                    const label = (data.history && data.history[0]) ? data.history[0].time : new Date().toLocaleTimeString();
 
-                    if (pulseChartInstance.data.labels.length > 12) {
+                    if (pulseChartInstance.data.labels.length >= 12) {
                         pulseChartInstance.data.labels.shift();
                         pulseChartInstance.data.datasets[0].data.shift();
                     }
-                    pulseChartInstance.data.labels.push(nowStr);
+                    pulseChartInstance.data.labels.push(label);
                     pulseChartInstance.data.datasets[0].data.push(cleanBpm);
                     pulseChartInstance.update();
                 }
@@ -466,7 +508,7 @@
                             <td>${h.date}</td>
                             <td>${h.time}</td>
                             <td class="fw-bold">${h.bpm}</td>
-                            <td><span class="badge ${h.status === 'High' ? 'bg-danger' : h.status === 'Low' ? 'bg-warning text-dark' : 'bg-success'}">${h.status}</span></td>
+                            <td><span class="badge ${statusBadgeClass(h.status)}">${h.status}</span></td>
                         `;
                         historyTable.appendChild(row);
                     });
@@ -478,11 +520,16 @@
             }
         }
 
+        // Patient page checks every 1 s so no 2-second reading is missed; doctor page every 2 s
+        setInterval(() => {
+            if (currentRole === 'patient' && selectedPatientView && document.getElementById('patient-dashboard-view').classList.contains('active')) {
+                loadPatientDashboard(selectedPatientView);
+            }
+        }, 1000);
+
         setInterval(() => {
             if (currentRole === 'doctor' && document.getElementById('doctor-dashboard-view').classList.contains('active')) {
                 loadDoctorDirectory();
-            } else if (currentRole === 'patient' && selectedPatientView && document.getElementById('patient-dashboard-view').classList.contains('active')) {
-                loadPatientDashboard(selectedPatientView);
             }
         }, 2000);
     </script>
