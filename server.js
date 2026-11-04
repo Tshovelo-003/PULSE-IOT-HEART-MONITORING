@@ -38,6 +38,8 @@ const DEVICE_KEY = "f5e2c78101a84a75ffbac169ca8a6ebd";
 
 function verifyDeviceKey(req, res, next) {
     if (req.headers['x-device-key'] !== DEVICE_KEY) {
+        // Visible in the Render logs: the device is online but its key does not match
+        console.warn('Telemetry REJECTED (401): wrong or missing x-device-key. Check deviceKey in the Arduino code.');
         return res.status(401).json({ error: "Unauthorized device key" });
     }
     next();
@@ -89,11 +91,19 @@ app.get('/api/patients/record', (req, res) => {
     }
 
     const live = isPatientLive(name);
+    const bpmText = live ? String(activeSession.last_bpm) : "--";
+    const statusText = live ? p.status : "No Signal";
+    // The same two lines that the LCD on the device shows
+    const lcdLine2 = !live ? "Place Finger"
+        : (p.status === "High" ? "Status: HIGH!" : p.status === "Low" ? "Status: LOW" : "Status: Normal");
     res.json({
         ...p,
-        bpm: live ? String(activeSession.last_bpm) : "--",   // number only; the page adds the "BPM" label
-        status: live ? p.status : "No Signal",
+        bpm: bpmText,                                          // number only; the page adds the "BPM" label
+        status: statusText,
         isLive: live,
+        rawSignal: live ? activeSession.last_signal : null,    // infrared level from the sensor
+        lcdLine1: `${name}: ${bpmText} BPM`,
+        lcdLine2: lcdLine2,
         serverTime: Date.now()
     });
 });
@@ -148,6 +158,7 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
         patientsDatabase[targetName].history.pop();
     }
 
+    console.log(`Reading accepted: ${targetName} ${bpmNum} BPM (${status})`);
     res.status(200).json({ success: true });
 });
 

@@ -26,6 +26,8 @@
         .ecg-graphic svg { width: 110px; height: 110px; fill: #ef4444; }
         .sensor-badge { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; background-color: #f1f3f4; color: #5f6368; }
         .badge-live { background-color: #e6f4ea; color: #137333; }
+        .lcd-screen { background: #1d4ed8; border: 6px solid #0f172a; border-radius: 8px; padding: 14px 18px; font-family: 'Courier New', monospace; font-size: 1.6rem; font-weight: 700; letter-spacing: 2px; color: #dbeafe; line-height: 1.5; box-shadow: inset 0 0 12px rgba(0,0,0,0.35); }
+        .lcd-screen.alert { background: #b91c1c; }
     </style>
 </head>
 <body>
@@ -117,6 +119,15 @@
                         <h6 id="patient-time" class="fw-bold text-dark my-2">None yet</h6>
                     </div>
                 </div>
+            </div>
+
+            <div class="card card-stat p-4 bg-white mb-4">
+                <span class="text-muted small fw-semibold">DEVICE DISPLAY (SAME TEXT AS THE LCD ON THE DEVICE)</span>
+                <div id="lcd-screen" class="lcd-screen mt-2">
+                    <div id="lcd-line1">--</div>
+                    <div id="lcd-line2">Place Finger</div>
+                </div>
+                <div id="lcd-extra" class="small text-muted mt-2">Waiting for a reading from the device...</div>
             </div>
 
             <div class="card card-stat p-3 bg-white mb-4 border-start border-danger border-4">
@@ -472,6 +483,16 @@
                 setStatusText(document.getElementById('patient-status'), live ? data.status : "No Signal");
                 document.getElementById('patient-time').innerText = data.lastSignal;
 
+            // Mirror of the device LCD: same two lines, same BPM, same status text
+            const lcd1 = data.lcdLine1 || `${patientName}: ${live ? data.bpm : '--'} BPM`;
+            const lcd2 = data.lcdLine2 || (!live ? 'Place Finger' : (data.status === 'High' ? 'Status: HIGH!' : data.status === 'Low' ? 'Status: LOW' : 'Status: Normal'));
+            document.getElementById('lcd-line1').textContent = lcd1;
+            document.getElementById('lcd-line2').textContent = lcd2;
+            document.getElementById('lcd-screen').classList.toggle('alert', live && (data.status === 'High' || data.status === 'Low'));
+            document.getElementById('lcd-extra').textContent = live
+                ? `Sensor signal (IR): ${data.rawSignal}   |   Last reading: ${data.lastSignal}`
+                : 'Waiting for a reading from the device (place a finger on the sensor)...';
+
                 // Badge follows the real sensor state
                 const badge = document.getElementById('sensor-status-badge');
                 if (live) {
@@ -499,7 +520,7 @@
                     const cleanBpm = parseInt(data.bpm);
                     const label = (data.history && data.history[0]) ? data.history[0].time : new Date().toLocaleTimeString();
 
-                    if (pulseChartInstance.data.labels.length >= 20) {
+                    if (pulseChartInstance.data.labels.length >= 12) {
                         pulseChartInstance.data.labels.shift();
                         pulseChartInstance.data.datasets[0].data.shift();
                     }
@@ -529,28 +550,18 @@
             }
         }
 
-        let patientBusy = false;
-        let doctorBusy = false;
-
-        // Patient page checks every 0.5 s so no 1-second reading is missed
+        // Patient page checks every 1 s so no 2-second reading is missed; doctor page every 2 s
         setInterval(() => {
-            if (patientBusy) return;
-            if (currentRole === 'patient' && selectedPatientView &&
-                document.getElementById('patient-dashboard-view').classList.contains('active')) {
-                patientBusy = true;
-                loadPatientDashboard(selectedPatientView).finally(() => { patientBusy = false; });
-            }
-        }, 500);
-
-        // Doctor page checks every 1 s
-        setInterval(() => {
-            if (doctorBusy) return;
-            if (currentRole === 'doctor' &&
-                document.getElementById('doctor-dashboard-view').classList.contains('active')) {
-                doctorBusy = true;
-                loadDoctorDirectory().finally(() => { doctorBusy = false; });
+            if (currentRole === 'patient' && selectedPatientView && document.getElementById('patient-dashboard-view').classList.contains('active')) {
+                loadPatientDashboard(selectedPatientView);
             }
         }, 1000);
+
+        setInterval(() => {
+            if (currentRole === 'doctor' && document.getElementById('doctor-dashboard-view').classList.contains('active')) {
+                loadDoctorDirectory();
+            }
+        }, 2000);
     </script>
 </body>
 </html>
