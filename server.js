@@ -7,7 +7,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-const LIVE_WINDOW_MS = 8000; // a reading older than this = "No Signal"
+const LIVE_WINDOW_MS = 5000; // a reading older than 5 seconds = "No Signal"
 
 function emptySession() {
     return {

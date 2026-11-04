@@ -499,7 +499,7 @@
                     const cleanBpm = parseInt(data.bpm);
                     const label = (data.history && data.history[0]) ? data.history[0].time : new Date().toLocaleTimeString();
 
-                    if (pulseChartInstance.data.labels.length >= 12) {
+                    if (pulseChartInstance.data.labels.length >= 20) {
                         pulseChartInstance.data.labels.shift();
                         pulseChartInstance.data.datasets[0].data.shift();
                     }
@@ -529,18 +529,28 @@
             }
         }
 
-        // Patient page checks every 1 s so no 2-second reading is missed; doctor page every 2 s
+        let patientBusy = false;
+        let doctorBusy = false;
+
+        // Patient page checks every 0.5 s so no 1-second reading is missed
         setInterval(() => {
-            if (currentRole === 'patient' && selectedPatientView && document.getElementById('patient-dashboard-view').classList.contains('active')) {
-                loadPatientDashboard(selectedPatientView);
+            if (patientBusy) return;
+            if (currentRole === 'patient' && selectedPatientView &&
+                document.getElementById('patient-dashboard-view').classList.contains('active')) {
+                patientBusy = true;
+                loadPatientDashboard(selectedPatientView).finally(() => { patientBusy = false; });
+            }
+        }, 500);
+
+        // Doctor page checks every 1 s
+        setInterval(() => {
+            if (doctorBusy) return;
+            if (currentRole === 'doctor' &&
+                document.getElementById('doctor-dashboard-view').classList.contains('active')) {
+                doctorBusy = true;
+                loadDoctorDirectory().finally(() => { doctorBusy = false; });
             }
         }, 1000);
-
-        setInterval(() => {
-            if (currentRole === 'doctor' && document.getElementById('doctor-dashboard-view').classList.contains('active')) {
-                loadDoctorDirectory();
-            }
-        }, 2000);
     </script>
 </body>
 </html>
