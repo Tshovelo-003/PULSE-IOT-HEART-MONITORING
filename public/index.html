@@ -119,6 +119,25 @@
                 </div>
             </div>
 
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card card-stat p-4 bg-white">
+                        <span class="text-muted small fw-semibold">OXYGEN (SpO2)</span>
+                        <h2 id="patient-spo2" class="display-5 fw-bold text-dark my-2">-- <span class="fs-5 text-muted">%</span></h2>
+                        <h6 id="patient-spo2-status" class="fw-bold text-secondary mb-1">No Signal</h6>
+                        <span class="text-muted small">Normal 95-100 %</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card card-stat p-4 bg-white">
+                        <span class="text-muted small fw-semibold">TEMPERATURE</span>
+                        <h2 id="patient-temp" class="display-5 fw-bold text-dark my-2">-- <span class="fs-5 text-muted">&deg;C</span></h2>
+                        <h6 id="patient-temp-status" class="fw-bold text-secondary mb-1">No Signal</h6>
+                        <span class="text-muted small">Normal 35.0-37.5 &deg;C (fingertip)</span>
+                    </div>
+                </div>
+            </div>
+
             <div class="card card-stat p-3 bg-white mb-4 border-start border-danger border-4">
                 <p id="alert-banner-text" class="mb-0 text-secondary small">No signal. Place your finger on the sensor and live readings will appear here.</p>
             </div>
@@ -127,6 +146,13 @@
                 <h5 class="fw-bold mb-3">Pulse Trendline (Live Heart Rate Graph)</h5>
                 <div style="height: 250px;">
                     <canvas id="patientPulseChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card card-stat p-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3">Oxygen and Temperature Trend</h5>
+                <div style="height: 250px;">
+                    <canvas id="patientVitalsChart"></canvas>
                 </div>
             </div>
 
@@ -139,11 +165,13 @@
                                 <th>Date, Year</th>
                                 <th>Time</th>
                                 <th>BPM</th>
+                                <th>SpO2</th>
+                                <th>Temp</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody id="patient-history-table">
-                            <tr><td colspan="4" class="text-center text-muted py-3">Waiting for readings...</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted py-3">Waiting for readings...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -208,6 +236,8 @@
                                 <th>Patient Name</th>
                                 <th>Latest BPM</th>
                                 <th>Status</th>
+                                <th>SpO2</th>
+                                <th>Temp</th>
                                 <th>Last Signal</th>
                             </tr>
                         </thead>
@@ -248,6 +278,23 @@
                         </div>
                     </div>
 
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded text-center">
+                                <span class="text-muted small fw-semibold d-block">OXYGEN (SpO2)</span>
+                                <h4 id="inspectModalSpo2" class="fw-bold text-dark my-1">-- %</h4>
+                                <span id="inspectModalSpo2Status" class="badge bg-secondary">--</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded text-center">
+                                <span class="text-muted small fw-semibold d-block">TEMPERATURE</span>
+                                <h4 id="inspectModalTemp" class="fw-bold text-dark my-1">-- &deg;C</h4>
+                                <span id="inspectModalTempStatus" class="badge bg-secondary">--</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <h6 class="fw-bold mb-3">Historical Logs & Threshold Alerts</h6>
                     <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
                         <table class="table table-sm align-middle">
@@ -256,6 +303,8 @@
                                     <th>Date, Year</th>
                                     <th>Time</th>
                                     <th>BPM</th>
+                                    <th>SpO2</th>
+                                    <th>Temp</th>
                                     <th>Status / Alert</th>
                                 </tr>
                             </thead>
@@ -276,6 +325,7 @@
         let currentRole = null;
         let selectedPatientView = null;
         let pulseChartInstance = null;
+        let vitalsChartInstance = null;
         let lastPlottedSignal = null;   // stops duplicate chart points
 
         function statusBadgeClass(status) {
@@ -294,6 +344,22 @@
         function setStatusText(el, status) {
             el.innerText = status;
             el.className = 'fw-bold my-2 ' + statusTextClass(status);
+        }
+
+        function numOrNull(v) {
+            const n = parseFloat(v);
+            return isNaN(n) ? null : n;
+        }
+
+        // Builds the alert text for heart rate, oxygen and temperature together
+        function alertMessages(data) {
+            const msgs = [];
+            if (data.status === "High") msgs.push(`<strong>Tachycardia alert:</strong> Your heart rate (${data.bpm} BPM) exceeds threshold (100 BPM).`);
+            if (data.status === "Low") msgs.push(`<strong>Bradycardia alert:</strong> Your heart rate (${data.bpm} BPM) falls below threshold (60 BPM).`);
+            if (data.spo2Status === "Low") msgs.push(`<strong>Low oxygen alert:</strong> Your SpO2 (${data.spo2} %) is below 95 %.`);
+            if (data.tempStatus === "High") msgs.push(`<strong>High temperature alert:</strong> ${data.temp} &deg;C is above 37.5 &deg;C.`);
+            if (data.tempStatus === "Low") msgs.push(`<strong>Low temperature alert:</strong> ${data.temp} &deg;C is below 35.0 &deg;C.`);
+            return msgs;
         }
 
         function initPulseChart() {
@@ -317,6 +383,27 @@
                     maintainAspectRatio: false,
                     animation: false,
                     scales: { y: { min: 40, max: 180 } }
+                }
+            });
+
+            const ctx2 = document.getElementById('patientVitalsChart').getContext('2d');
+            vitalsChartInstance = new Chart(ctx2, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        { label: 'SpO2 (%)', data: [], borderColor: '#0d6efd', backgroundColor: 'rgba(13, 110, 253, 0.1)', borderWidth: 2, tension: 0.3, yAxisID: 'y' },
+                        { label: 'Temperature (\u00B0C)', data: [], borderColor: '#fd7e14', backgroundColor: 'rgba(253, 126, 20, 0.1)', borderWidth: 2, tension: 0.3, yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        y:  { min: 80, max: 100, position: 'left',  title: { display: true, text: 'SpO2 (%)' } },
+                        y1: { min: 30, max: 42,  position: 'right', title: { display: true, text: '\u00B0C' }, grid: { drawOnChartArea: false } }
+                    }
                 }
             });
         }
@@ -396,7 +483,7 @@
                 patients.forEach(p => {
                     const live = p.isLive === true;
                     if (live) liveCount++;
-                    if (live && (p.status === "High" || p.status === "Low")) alertCount++;
+                    if (p.alert === true) alertCount++;
 
                     const shownBpm = live ? p.bpm : "--";
                     const shownStatus = live ? p.status : "No Signal";
@@ -407,6 +494,8 @@
                         <td class="fw-bold text-primary">${p.name}</td>
                         <td>${shownBpm}</td>
                         <td><span class="badge ${statusBadgeClass(shownStatus)}">${shownStatus}</span></td>
+                        <td>${p.spo2 || "--"} <span class="badge ${statusBadgeClass(p.spo2Status)}">${p.spo2Status && p.spo2Status !== "--" ? p.spo2Status : ""}</span></td>
+                        <td>${p.temp || "--"} <span class="badge ${statusBadgeClass(p.tempStatus)}">${p.tempStatus && p.tempStatus !== "--" ? p.tempStatus : ""}</span></td>
                         <td class="text-muted small">${p.lastSignal}</td>
                     `;
                     tbody.appendChild(tr);
@@ -429,6 +518,12 @@
                 document.getElementById('inspectModalBpm').innerText = live ? `${data.bpm} BPM` : "-- BPM";
                 setStatusText(document.getElementById('inspectModalStatus'), live ? data.status : "No Signal");
                 document.getElementById('inspectModalTime').innerText = data.lastSignal;
+                document.getElementById('inspectModalSpo2').innerText = (live && data.spo2 !== "--") ? `${data.spo2} %` : "-- %";
+                document.getElementById('inspectModalTemp').innerText = (live && data.temp !== "--") ? `${data.temp} \u00B0C` : "-- \u00B0C";
+                const sp = document.getElementById('inspectModalSpo2Status');
+                sp.innerText = data.spo2Status || "--"; sp.className = 'badge ' + statusBadgeClass(data.spo2Status);
+                const tp = document.getElementById('inspectModalTempStatus');
+                tp.innerText = data.tempStatus || "--"; tp.className = 'badge ' + statusBadgeClass(data.tempStatus);
 
                 const historyTable = document.getElementById('inspectModalHistory');
                 historyTable.innerHTML = '';
@@ -440,12 +535,16 @@
                             <td>${h.date}</td>
                             <td>${h.time}</td>
                             <td class="fw-bold">${h.bpm}</td>
-                            <td><span class="badge ${statusBadgeClass(h.status)}">${h.status}</span></td>
+                            <td>${h.spo2 || "--"}</td>
+                            <td>${h.temp || "--"}</td>
+                            <td><span class="badge ${statusBadgeClass(h.status)}">${h.status}</span>
+                                ${h.spo2Status === "Low" ? '<span class="badge bg-danger">SpO2 Low</span>' : ''}
+                                ${h.tempStatus === "High" || h.tempStatus === "Low" ? `<span class="badge bg-danger">Temp ${h.tempStatus}</span>` : ''}</td>
                         `;
                         historyTable.appendChild(row);
                     });
                 } else {
-                    historyTable.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-2">No logs recorded.</td></tr>`;
+                    historyTable.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-2">No logs recorded.</td></tr>`;
                 }
 
                 const modal = new bootstrap.Modal(document.getElementById('doctorInspectModal'));
@@ -482,15 +581,24 @@
                     badge.innerText = "No Signal";
                 }
 
+                // Oxygen and temperature cards (number only; the unit is added here)
+                const spo2Live = live && data.spo2 !== "--";
+                const tempLive = live && data.temp !== "--";
+                document.getElementById('patient-spo2').innerHTML = `${spo2Live ? data.spo2 : "--"} <span class="fs-5 text-muted">%</span>`;
+                document.getElementById('patient-temp').innerHTML = `${tempLive ? data.temp : "--"} <span class="fs-5 text-muted">&deg;C</span>`;
+                const sEl = document.getElementById('patient-spo2-status');
+                sEl.innerText = live ? (data.spo2Status || "--") : "No Signal";
+                sEl.className = 'fw-bold mb-1 ' + statusTextClass(sEl.innerText);
+                const tEl = document.getElementById('patient-temp-status');
+                tEl.innerText = live ? (data.tempStatus || "--") : "No Signal";
+                tEl.className = 'fw-bold mb-1 ' + statusTextClass(tEl.innerText);
+
                 const alertBanner = document.getElementById('alert-banner-text');
                 if (!live) {
                     alertBanner.innerHTML = "No signal. Place your finger on the sensor and live readings will appear here.";
-                } else if (data.status === "High") {
-                    alertBanner.innerHTML = `<strong>Tachycardia alert:</strong> Your heart rate (${data.bpm} BPM) exceeds threshold (100 BPM).`;
-                } else if (data.status === "Low") {
-                    alertBanner.innerHTML = `<strong>Bradycardia alert:</strong> Your heart rate (${data.bpm} BPM) falls below threshold (60 BPM).`;
                 } else {
-                    alertBanner.innerHTML = "No active threshold breaches. Your heart rate is within normal range.";
+                    const msgs = alertMessages(data);
+                    alertBanner.innerHTML = msgs.length ? msgs.join("<br>") : "No active threshold breaches. Your heart rate, oxygen and temperature are within normal range.";
                 }
 
                 // Chart: add a point ONLY when live AND a new reading arrived
@@ -499,13 +607,25 @@
                     const cleanBpm = parseInt(data.bpm);
                     const label = (data.history && data.history[0]) ? data.history[0].time : new Date().toLocaleTimeString();
 
-                    if (pulseChartInstance.data.labels.length >= 12) {
+                    if (pulseChartInstance.data.labels.length >= 20) {
                         pulseChartInstance.data.labels.shift();
                         pulseChartInstance.data.datasets[0].data.shift();
                     }
                     pulseChartInstance.data.labels.push(label);
                     pulseChartInstance.data.datasets[0].data.push(cleanBpm);
                     pulseChartInstance.update();
+
+                    if (vitalsChartInstance) {
+                        if (vitalsChartInstance.data.labels.length >= 20) {
+                            vitalsChartInstance.data.labels.shift();
+                            vitalsChartInstance.data.datasets[0].data.shift();
+                            vitalsChartInstance.data.datasets[1].data.shift();
+                        }
+                        vitalsChartInstance.data.labels.push(label);
+                        vitalsChartInstance.data.datasets[0].data.push(spo2Live ? numOrNull(data.spo2) : null);
+                        vitalsChartInstance.data.datasets[1].data.push(tempLive ? numOrNull(data.temp) : null);
+                        vitalsChartInstance.update();
+                    }
                 }
 
                 const historyTable = document.getElementById('patient-history-table');
@@ -517,30 +637,44 @@
                             <td>${h.date}</td>
                             <td>${h.time}</td>
                             <td class="fw-bold">${h.bpm}</td>
-                            <td><span class="badge ${statusBadgeClass(h.status)}">${h.status}</span></td>
+                            <td>${h.spo2 || "--"}</td>
+                            <td>${h.temp || "--"}</td>
+                            <td><span class="badge ${statusBadgeClass(h.status)}">${h.status}</span>
+                                ${h.spo2Status === "Low" ? '<span class="badge bg-danger">SpO2 Low</span>' : ''}
+                                ${h.tempStatus === "High" || h.tempStatus === "Low" ? `<span class="badge bg-danger">Temp ${h.tempStatus}</span>` : ''}</td>
                         `;
                         historyTable.appendChild(row);
                     });
                 } else {
-                    historyTable.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No historical logs recorded yet.</td></tr>`;
+                    historyTable.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">No historical logs recorded yet.</td></tr>`;
                 }
             } catch (err) {
                 console.error("Error loading patient record", err);
             }
         }
 
-        // Patient page checks every 1 s so no 2-second reading is missed; doctor page every 2 s
+        let patientBusy = false;
+        let doctorBusy = false;
+
+        // Patient page checks every 0.5 s so no 1-second reading is missed
         setInterval(() => {
-            if (currentRole === 'patient' && selectedPatientView && document.getElementById('patient-dashboard-view').classList.contains('active')) {
-                loadPatientDashboard(selectedPatientView);
+            if (patientBusy) return;
+            if (currentRole === 'patient' && selectedPatientView &&
+                document.getElementById('patient-dashboard-view').classList.contains('active')) {
+                patientBusy = true;
+                loadPatientDashboard(selectedPatientView).finally(() => { patientBusy = false; });
+            }
+        }, 500);
+
+        // Doctor page checks every 1 s
+        setInterval(() => {
+            if (doctorBusy) return;
+            if (currentRole === 'doctor' &&
+                document.getElementById('doctor-dashboard-view').classList.contains('active')) {
+                doctorBusy = true;
+                loadDoctorDirectory().finally(() => { doctorBusy = false; });
             }
         }, 1000);
-
-        setInterval(() => {
-            if (currentRole === 'doctor' && document.getElementById('doctor-dashboard-view').classList.contains('active')) {
-                loadDoctorDirectory();
-            }
-        }, 2000);
     </script>
 </body>
 </html>

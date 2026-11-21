@@ -15,6 +15,8 @@ function emptySession() {
         name: "",
         last_bpm: 0,
         last_signal: 0,
+        last_spo2: 0,
+        last_temp: 0,
         last_updated: null
     };
 }
@@ -22,9 +24,9 @@ function emptySession() {
 let activeSession = emptySession();
 
 let patientsDatabase = {
-    "Tshovelo": { id: 1, name: "Tshovelo", bpm: "--", status: "No data", lastSignal: "None yet", history: [] },
-    "Nhlelo": { id: 2, name: "Nhlelo", bpm: "--", status: "No data", lastSignal: "None yet", history: [] },
-    "Engetelo": { id: 3, name: "Engetelo", bpm: "--", status: "No data", lastSignal: "None yet", history: [] }
+    "Tshovelo": { id: 1, name: "Tshovelo", bpm: "--", status: "No data", spo2: "--", spo2Status: "No data", temp: "--", tempStatus: "No data", lastSignal: "None yet", history: [] },
+    "Nhlelo": { id: 2, name: "Nhlelo", bpm: "--", status: "No data", spo2: "--", spo2Status: "No data", temp: "--", tempStatus: "No data", lastSignal: "None yet", history: [] },
+    "Engetelo": { id: 3, name: "Engetelo", bpm: "--", status: "No data", spo2: "--", spo2Status: "No data", temp: "--", tempStatus: "No data", lastSignal: "None yet", history: [] }
 };
 
 const userPasswords = {
@@ -41,6 +43,23 @@ function verifyDeviceKey(req, res, next) {
         return res.status(401).json({ error: "Unauthorized device key" });
     }
     next();
+}
+
+// ---------- Oxygen (SpO2) and temperature rules ----------
+const SPO2_LOW = 95;        // below this = Low oxygen
+const TEMP_LOW = 35.0;      // below this = Low temperature (deg C)
+const TEMP_HIGH = 37.5;     // above this = High temperature / fever (deg C)
+
+function classifySpo2(v) { return v >= SPO2_LOW ? "Normal" : "Low"; }
+function classifyTemp(t) {
+    if (t > TEMP_HIGH) return "High";
+    if (t < TEMP_LOW) return "Low";
+    return "Normal";
+}
+// A live patient has an alert if heart rate, oxygen or temperature is out of range
+function hasAlert(live, bpmStatus, spo2Status, tempStatus) {
+    return live && (bpmStatus === "High" || bpmStatus === "Low" ||
+                    spo2Status === "Low" || tempStatus === "High" || tempStatus === "Low");
 }
 
 // True only if this patient is logged in AND a fresh reading arrived recently
@@ -70,10 +89,17 @@ app.post('/api/logout', (req, res) => {
 app.get('/api/patients/all', (req, res) => {
     const list = Object.values(patientsDatabase).map(p => {
         const live = isPatientLive(p.name);
+        const hasSpo2 = live && activeSession.last_spo2 > 0;
+        const hasTemp = live && activeSession.last_temp > 0;
         return {
             ...p,
             bpm: live ? `${activeSession.last_bpm} BPM` : "--",
             status: live ? p.status : "No Signal",
+            spo2: hasSpo2 ? `${activeSession.last_spo2} %` : "--",
+            spo2Status: hasSpo2 ? p.spo2Status : (live ? "--" : "No Signal"),
+            temp: hasTemp ? `${activeSession.last_temp.toFixed(1)} °C` : "--",
+            tempStatus: hasTemp ? p.tempStatus : (live ? "--" : "No Signal"),
+            alert: hasAlert(live, p.status, hasSpo2 ? p.spo2Status : "--", hasTemp ? p.tempStatus : "--"),
             isLive: live
         };
     });
@@ -89,10 +115,17 @@ app.get('/api/patients/record', (req, res) => {
     }
 
     const live = isPatientLive(name);
+    const hasSpo2 = live && activeSession.last_spo2 > 0;
+    const hasTemp = live && activeSession.last_temp > 0;
     res.json({
         ...p,
         bpm: live ? String(activeSession.last_bpm) : "--",   // number only; the page adds the "BPM" label
         status: live ? p.status : "No Signal",
+        spo2: hasSpo2 ? String(activeSession.last_spo2) : "--",             // number only; page adds "%"
+        spo2Status: hasSpo2 ? p.spo2Status : (live ? "--" : "No Signal"),
+        temp: hasTemp ? activeSession.last_temp.toFixed(1) : "--",          // number only; page adds "°C"
+        tempStatus: hasTemp ? p.tempStatus : (live ? "--" : "No Signal"),
+        alert: hasAlert(live, p.status, hasSpo2 ? p.spo2Status : "--", hasTemp ? p.tempStatus : "--"),
         isLive: live,
         serverTime: Date.now()
     });
@@ -100,7 +133,7 @@ app.get('/api/patients/record', (req, res) => {
 
 // ---------- Telemetry from the Arduino ----------
 app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
-    const { name, bpm, raw_signal, timestamp } = req.body;
+    const { name, bpm, raw_signal, timestamp, spo2, temperature } = req.body;
 
     // Nobody logged in -> refuse (stops a logged-out patient coming back)
     if (!activeSession.name) {
@@ -125,23 +158,41 @@ app.post('/api/telemetry', verifyDeviceKey, (req, res) => {
     if (bpmNum > 100) status = "High";
     else if (bpmNum < 60) status = "Low";
 
+    // Oxygen and temperature are optional: a value outside the sensor range is ignored
+    const spo2Num = Number(spo2);
+    const tempNum = Number(temperature);
+    const spo2Ok = spo2Num >= 70 && spo2Num <= 100;
+    const tempOk = tempNum >= 25 && tempNum <= 45;
+    const spo2Status = spo2Ok ? classifySpo2(spo2Num) : "--";
+    const tempStatus = tempOk ? classifyTemp(tempNum) : "--";
+
     const currentDate = new Date().toLocaleDateString() + ", " + new Date().getFullYear();
     const currentTime = timestamp || new Date().toLocaleTimeString();
 
     // Only update readings, never the logged-in identity
     activeSession.last_bpm = bpmNum;
     activeSession.last_signal = raw_signal;
+    activeSession.last_spo2 = spo2Ok ? Math.round(spo2Num) : 0;
+    activeSession.last_temp = tempOk ? tempNum : 0;
     activeSession.last_updated = new Date();
 
     patientsDatabase[targetName].bpm = `${bpmNum} BPM`;
     patientsDatabase[targetName].status = status;
+    patientsDatabase[targetName].spo2 = spo2Ok ? `${Math.round(spo2Num)} %` : "--";
+    patientsDatabase[targetName].spo2Status = spo2Status;
+    patientsDatabase[targetName].temp = tempOk ? `${tempNum.toFixed(1)} °C` : "--";
+    patientsDatabase[targetName].tempStatus = tempStatus;
     patientsDatabase[targetName].lastSignal = `${currentDate}, ${currentTime}`;
 
     patientsDatabase[targetName].history.unshift({
         date: currentDate,
         time: currentTime,
         bpm: `${bpmNum} BPM`,
-        status: status
+        status: status,
+        spo2: spo2Ok ? `${Math.round(spo2Num)} %` : "--",
+        spo2Status: spo2Status,
+        temp: tempOk ? `${tempNum.toFixed(1)} °C` : "--",
+        tempStatus: tempStatus
     });
 
     if (patientsDatabase[targetName].history.length > 25) {
