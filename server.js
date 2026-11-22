@@ -215,6 +215,10 @@ app.post('/api/login', (req, res) => {
         if (password !== userPasswords[identity]) {
             return res.status(401).json({ error: "Invalid password or case mismatch." });
         }
+        // Same patient logging in again (page keep-alive): keep the current readings
+        if (activeSession.name === identity) {
+            return res.status(200).json({ success: true, role: 'patient', username: identity });
+        }
         activeSession = {
             patient_id: patientsDatabase[identity].id,
             name: identity,
