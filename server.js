@@ -47,7 +47,7 @@ function verifyDeviceKey(req, res, next) {
 
 // ---------- Oxygen (SpO2) and temperature rules ----------
 const SPO2_LOW = 95;        // below this = Low oxygen
-const TEMP_LOW = 35.0;      // below this = Low temperature (deg C)
+const TEMP_LOW = 20.0;      // below this = Low temperature (deg C); 20 because the MAX30102 chip temperature is used
 const TEMP_HIGH = 37.5;     // above this = High temperature / fever (deg C)
 
 function classifySpo2(v) { return v >= SPO2_LOW ? "Normal" : "Low"; }
@@ -224,6 +224,8 @@ app.post('/api/login', (req, res) => {
             name: identity,
             last_bpm: 0,
             last_signal: 0,
+            last_spo2: 0,
+            last_temp: 0,
             last_updated: null      // fresh login = no signal until the sensor sends data
         };
         return res.status(200).json({ success: true, role: 'patient', username: identity });

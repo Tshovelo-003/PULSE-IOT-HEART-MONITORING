@@ -133,7 +133,7 @@
                         <span class="text-muted small fw-semibold">TEMPERATURE</span>
                         <h2 id="patient-temp" class="display-5 fw-bold text-dark my-2">-- <span class="fs-5 text-muted">&deg;C</span></h2>
                         <h6 id="patient-temp-status" class="fw-bold text-secondary mb-1">No Signal</h6>
-                        <span class="text-muted small">Normal 35.0-37.5 &deg;C (fingertip)</span>
+                        <span class="text-muted small">Normal 20.0-37.5 &deg;C (sensor)</span>
                     </div>
                 </div>
             </div>
@@ -359,7 +359,7 @@
             if (data.status === "Low") msgs.push(`<strong>Bradycardia alert:</strong> Your heart rate (${data.bpm} BPM) falls below threshold (60 BPM).`);
             if (data.spo2Status === "Low") msgs.push(`<strong>Low oxygen alert:</strong> Your SpO2 (${data.spo2} %) is below 95 %.`);
             if (data.tempStatus === "High") msgs.push(`<strong>High temperature alert:</strong> ${data.temp} &deg;C is above 37.5 &deg;C.`);
-            if (data.tempStatus === "Low") msgs.push(`<strong>Low temperature alert:</strong> ${data.temp} &deg;C is below 35.0 &deg;C.`);
+            if (data.tempStatus === "Low") msgs.push(`<strong>Low temperature alert:</strong> ${data.temp} &deg;C is below 20.0 &deg;C.`);
             return msgs;
         }
 
